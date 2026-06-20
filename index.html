@@ -638,11 +638,7 @@ select option{background:#0a1e38;}
 
     <div style="margin-bottom:16px;">
       <label style="display:block;font-size:11px;font-weight:600;color:#c0392b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📄 PDF do Orçamento</label>
-      <div class="brow" style="gap:8px;">
-        <button class="btn btn-pdf" onclick="gerarPDF()" style="flex:1;">📄 Gerar PDF</button>
-        <button class="btn btn-wpp" onclick="enviarOrcamentoWpp()" style="flex:1;">📲 Enviar p/ WhatsApp</button>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">O botão WhatsApp abre o chat com o texto do orçamento + link para salvar PDF</div>
+      <button class="btn btn-pdf" onclick="gerarPDF()" style="width:100%;">📄 Baixar PDF</button>
     </div>
 
     <button class="btn btn-o" onclick="fecharModal('modal-share')" style="width:100%;">Fechar</button>
@@ -2119,11 +2115,14 @@ function enviarOrcamentoWpp(){
 
 // ============ ABRIR MODAL CLIENTE ============
 function abrirModalCliente(){
-  mudarTab('clientes');
+  mudarTab('nova-os');
   setTimeout(()=>{
-    const btn=document.querySelector('#tab-clientes .btn-g');
-    if(btn)btn.click();
-  },100);
+    const el=document.getElementById('nc-nome');
+    if(el){
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+      el.focus();
+    }
+  },150);
 }
 
 function mudarTab(t){
