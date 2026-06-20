@@ -20,6 +20,40 @@ header{background:rgba(7,18,42,.95);border-bottom:1px solid var(--border);paddin
 .hstatus{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);}
 .sdot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* ===== TELA INICIAL ===== */
+.home-saudacao{padding:20px 0 10px;text-align:center;}
+.home-saudacao .saud-titulo{font-size:22px;font-weight:800;color:#fff;line-height:1.2;}
+.home-saudacao .saud-titulo span{color:var(--green);}
+.home-saudacao .saud-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+.home-atalhos{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;}
+.home-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 12px;border-radius:14px;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#fff;transition:transform .15s,opacity .15s;min-height:80px;width:100%;}
+.home-btn:active{transform:scale(.96);opacity:.85;}
+.home-btn-icon{font-size:26px;line-height:1;}
+.home-btn.azul{background:linear-gradient(135deg,#1B6FD8,#2AABEE);}
+.home-btn.verde{background:linear-gradient(135deg,#2e7d1e,#4CAF22);}
+.home-resumo{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.home-card{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;}
+.home-card .hc-num{font-size:22px;font-weight:800;color:#fff;line-height:1;}
+.home-card .hc-label{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}
+.home-rodape{background:rgba(76,175,34,.08);border:1px solid rgba(76,175,34,.2);border-radius:12px;padding:14px 16px;text-align:center;margin-bottom:20px;font-size:14px;font-weight:700;color:var(--green);}
+.home-cal{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;}
+.home-cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.home-cal-title{font-size:15px;font-weight:700;color:#fff;}
+.home-cal-nav{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.home-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.home-cal-dow{font-size:10px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0;}
+.home-cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;position:relative;}
+.home-cal-day.outro{color:rgba(255,255,255,.2);}
+.home-cal-day.hoje{background:var(--blue);color:#fff;font-weight:800;}
+.home-cal-day.tem-ag::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);position:absolute;bottom:2px;}
+.home-cal-day.feriado-dia{color:var(--orange);}
+.home-cal-day.hoje.feriado-dia{background:var(--orange);color:#fff;}
+.home-feriados{margin-top:8px;border-top:1px solid var(--border);padding-top:8px;}
+.home-feriado-item{font-size:11px;color:var(--orange);padding:2px 0;display:flex;gap:6px;}
+.home-feriado-item strong{color:#fff;min-width:20px;}
+.cal-day.feriado{border-top:2px solid var(--orange);}
+.cal-feriados-lista{padding:8px 0 4px;display:flex;flex-wrap:wrap;gap:6px;}
+.cal-fer-item{font-size:11px;color:var(--orange);background:rgba(255,152,0,.08);border-radius:6px;padding:3px 8px;}
 .container{max-width:1100px;margin:0 auto;padding:20px 16px;}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:20px;}
@@ -228,30 +262,94 @@ select option{background:#0a1e38;}
 
 <div class="container">
 
-  <!-- DASHBOARD STATS -->
-  <div class="g4" id="dash-stats">
-    <div class="scard"><div class="snum" id="st">0</div><div class="slabel">Total OS</div></div>
-    <div class="scard"><div class="snum" id="sf" style="color:var(--green)">0</div><div class="slabel">Aprovados</div></div>
-    <div class="scard"><div class="snum" id="sc">0</div><div class="slabel">Clientes</div></div>
-    <div class="scard"><div class="snum" id="sreat" style="color:var(--orange)">0</div><div class="slabel">Reativar</div></div>
-  </div>
-
-  <!-- LINHA 2 STATS -->
-  <div class="g3" id="dash-stats2" style="margin-bottom:20px;">
-    <div class="scard"><div class="snum" id="s-agenda-sem" style="color:var(--sky)">0</div><div class="slabel">Agenda esta semana</div></div>
-    <div class="scard"><div class="snum" id="s-fat-mes" style="color:var(--green);font-size:18px;">R$ 0</div><div class="slabel">Faturamento do mês</div></div>
-    <div class="scard" style="cursor:pointer;" onclick="mudarTab('agenda')"><div class="snum" id="s-prox" style="color:var(--imp,#9C27B0)">0</div><div class="slabel">Próximos serviços</div></div>
+  <!-- STATS OCULTOS (mantidos para compatibilidade) -->
+  <div style="display:none">
+    <span id="st">0</span><span id="sf">0</span><span id="sc">0</span>
+    <span id="sreat">0</span><span id="s-agenda-sem">0</span>
+    <span id="s-fat-mes">R$ 0</span><span id="s-prox">0</span>
+    <span id="dash-stats"></span><span id="dash-stats2"></span>
   </div>
 
   <div class="tabs">
-    <button class="tab active" onclick="mudarTab('nova-os')">📋 OS</button>
+    <button class="tab active" onclick="mudarTab('home')">🏠 Início</button>
+    <button class="tab" onclick="mudarTab('nova-os')">📋 OS</button>
     <button class="tab" onclick="mudarTab('agenda')">📅 Agenda</button>
-    <button class="tab" onclick="mudarTab('faturamento')">💰 Faturamento</button>
+    <button class="tab" onclick="mudarTab('faturamento')">💰 Fat.</button>
     <button class="tab" onclick="mudarTab('clientes')">👥 Clientes</button>
     <button class="tab" onclick="mudarTab('hist')">📊 Mês</button>
-    <button class="tab" onclick="mudarTab('historico')">🗂️ Histórico</button>
+    <button class="tab" onclick="mudarTab('historico')">🗂️ Hist.</button>
     <button class="tab" id="tab-btn-reat" onclick="mudarTab('reat')">🔔 Reativar</button>
     <button class="tab" onclick="mudarTab('config')">⚙️ Tipos</button>
+  </div>
+
+  <!-- ===== TAB: HOME ===== -->
+  <div id="tab-home" class="tbc active">
+    <!-- Saudação -->
+    <div class="home-saudacao">
+      <div class="saud-titulo" id="home-saud-titulo">Bom dia, <span>Super Clean!</span> ☀️</div>
+      <div class="saud-sub" id="home-saud-sub">Carregando...</div>
+    </div>
+
+    <!-- Botões de atalho -->
+    <div class="home-atalhos">
+      <button class="home-btn azul" onclick="mudarTab('nova-os')">
+        <span class="home-btn-icon">🧾</span>Nova OS
+      </button>
+      <button class="home-btn verde" onclick="mudarTab('agenda')">
+        <span class="home-btn-icon">📅</span>Agendamento
+      </button>
+      <button class="home-btn verde" onclick="abrirModalCliente()">
+        <span class="home-btn-icon">👤</span>Novo Cliente
+      </button>
+      <button class="home-btn azul" onclick="mudarTab('faturamento')">
+        <span class="home-btn-icon">💰</span>Faturamento
+      </button>
+    </div>
+
+    <!-- Cards resumo -->
+    <div class="home-resumo">
+      <div class="home-card">
+        <div class="hc-num" id="hc-hoje" style="color:var(--sky)">0</div>
+        <div class="hc-label">📅 Agenda hoje</div>
+      </div>
+      <div class="home-card">
+        <div class="hc-num" id="hc-fat" style="color:var(--green);font-size:16px;">R$ 0</div>
+        <div class="hc-label">💰 Faturado mês</div>
+      </div>
+      <div class="home-card">
+        <div class="hc-num" id="hc-pend" style="color:var(--orange)">0</div>
+        <div class="hc-label">📋 OS Pendentes</div>
+      </div>
+      <div class="home-card">
+        <div class="hc-num" id="hc-cli" style="color:var(--sky)">0</div>
+        <div class="hc-label">👥 Clientes</div>
+      </div>
+    </div>
+
+    <!-- Calendário home -->
+    <div class="home-cal">
+      <div class="home-cal-header">
+        <button class="home-cal-nav" onclick="navHomeCalendario(-1)">‹</button>
+        <div class="home-cal-title" id="home-cal-titulo">Junho 2026</div>
+        <button class="home-cal-nav" onclick="navHomeCalendario(1)">›</button>
+      </div>
+      <div class="home-cal-grid" id="home-cal-body-wrap">
+        <div class="home-cal-dow">Dom</div>
+        <div class="home-cal-dow">Seg</div>
+        <div class="home-cal-dow">Ter</div>
+        <div class="home-cal-dow">Qua</div>
+        <div class="home-cal-dow">Qui</div>
+        <div class="home-cal-dow">Sex</div>
+        <div class="home-cal-dow">Sáb</div>
+      </div>
+      <div class="home-cal-grid" id="home-cal-body" style="margin-top:2px;"></div>
+      <div class="home-feriados" id="home-feriados-lista"></div>
+    </div>
+
+    <!-- Rodapé financeiro -->
+    <div class="home-rodape" id="home-rodape-fat">
+      💰 R$ 0,00 em vendas aprovadas esse mês
+    </div>
   </div>
 
   <!-- ===== TAB: NOVA OS ===== -->
@@ -359,6 +457,7 @@ select option{background:#0a1e38;}
         <div class="cal-dow">QUA</div><div class="cal-dow">QUI</div><div class="cal-dow">SEX</div><div class="cal-dow">SÁB</div>
         <div id="cal-body" style="display:contents;"></div>
       </div>
+      <div id="agenda-feriados-lista"></div>
     </div>
 
     <!-- Lista agendamentos da semana -->
@@ -539,7 +638,11 @@ select option{background:#0a1e38;}
 
     <div style="margin-bottom:16px;">
       <label style="display:block;font-size:11px;font-weight:600;color:#c0392b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📄 PDF do Orçamento</label>
-      <button class="btn btn-pdf" onclick="gerarPDF()" style="width:100%;">📄 Baixar PDF</button>
+      <div class="brow" style="gap:8px;">
+        <button class="btn btn-pdf" onclick="gerarPDF()" style="flex:1;">📄 Gerar PDF</button>
+        <button class="btn btn-wpp" onclick="enviarOrcamentoWpp()" style="flex:1;">📲 Enviar p/ WhatsApp</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-align:center;">O botão WhatsApp abre o chat com o texto do orçamento + link para salvar PDF</div>
     </div>
 
     <button class="btn btn-o" onclick="fecharModal('modal-share')" style="width:100%;">Fechar</button>
@@ -796,6 +899,7 @@ function init(){
     precos       = JSON.parse(localStorage.getItem('sc_precos')     ||'{}');
     mesAtual     = localStorage.getItem('sc_mes_atual') || getMesKey();
     osCounter    = parseInt(localStorage.getItem('sc_os_counter')   ||'0');
+    mudarTab('home');
     document.getElementById('hmes').textContent=getMesLabel(mesAtual);
     const proxOS=osCounter+1;
     document.getElementById('os-num-badge').textContent='OS #'+String(proxOS).padStart(4,'0');
@@ -1433,6 +1537,7 @@ function rendCalendario(ano,mes,agsMes){
   const primeiroDia=new Date(ano,mes,1).getDay();
   const diasNoMes=new Date(ano,mes+1,0).getDate();
   const diasAntMes=new Date(ano,mes,0).getDate();
+  const feriados=getFeriados(ano);
 
   // Mapa: dia -> agendamentos
   const mapaAg={};
@@ -1453,13 +1558,15 @@ function rendCalendario(ano,mes,agsMes){
     const isHoje=dStr===hoje_str;
     const ags=mapaAg[d]||[];
     const temAg=ags.length>0;
+    const isFer=!!feriados[dStr];
     const cConf=ags.filter(a=>a.status==='confirmado').length;
     const cPend=ags.filter(a=>a.status==='pendente').length;
     let badges='';
+    if(isFer)badges+=`<span style="font-size:9px;color:var(--orange);display:block;line-height:1.1;">${feriados[dStr].split(' ')[0]}</span>`;
     if(cConf)badges+=`<span class="cal-badge conf">${cConf} serv.</span>`;
     if(cPend)badges+=`<span class="cal-badge pend">${cPend} pend.</span>`;
     if(ags.length&&!cConf&&!cPend)badges+=`<span class="cal-badge">${ags.length} serv.</span>`;
-    html+=`<div class="cal-day${isHoje?' today':''}${temAg?' tem-agenda':''}" onclick="abrirDiaAgenda('${dStr}',${d})">
+    html+=`<div class="cal-day${isHoje?' today':''}${temAg?' tem-agenda':''}${isFer?' feriado':''}" onclick="abrirDiaAgenda('${dStr}',${d})">
       <div class="cal-day-num">${d}</div>${badges}
     </div>`;
   }
@@ -1470,6 +1577,21 @@ function rendCalendario(ano,mes,agsMes){
     html+=`<div class="cal-day outro-mes"><div class="cal-day-num">${d}</div></div>`;
   }
   cal.innerHTML=html;
+
+  // Lista de feriados do mês na agenda
+  const ferDoMes=Object.entries(feriados).filter(([dt])=>{
+    const [ay,am]=dt.split('-');
+    return parseInt(ay)===ano&&parseInt(am)-1===mes;
+  }).sort(([a],[b])=>a.localeCompare(b));
+  const ferListEl=document.getElementById('agenda-feriados-lista');
+  if(ferListEl){
+    ferListEl.innerHTML=ferDoMes.length
+      ?'<div class="cal-feriados-lista">'+ferDoMes.map(([dt,nome])=>{
+          const dia=parseInt(dt.split('-')[2]);
+          return `<span class="cal-fer-item">📅 ${String(dia).padStart(2,'0')} — ${nome}</span>`;
+        }).join('')+'</div>'
+      :'';
+  }
 }
 
 function today(){
@@ -1816,28 +1938,203 @@ function setPreco(tipo,srv,val){
 // ============ STATS ============
 function updStats(){
   const fechadas=ordens.filter(o=>o.status==='aprovado');
+  // Stats ocultos (compatibilidade)
   document.getElementById('st').textContent=ordens.length;
   document.getElementById('sf').textContent=fechadas.length;
   document.getElementById('sc').textContent=clientes.length;
-  // Agenda semana
   const hj=today();
   const em7=new Date();em7.setDate(em7.getDate()+7);
   const em7str=em7.getFullYear()+'-'+String(em7.getMonth()+1).padStart(2,'0')+'-'+String(em7.getDate()).padStart(2,'0');
   const agSem=agendamentos.filter(a=>a.data>=hj&&a.data<=em7str&&a.status!=='cancelado');
   document.getElementById('s-agenda-sem').textContent=agSem.length;
+  // Atualizar home cards se existirem
+  const hcHoje=document.getElementById('hc-hoje');
+  if(hcHoje){
+    const agHoje=agendamentos.filter(a=>a.data===hj&&a.status!=='cancelado').length;
+    hcHoje.textContent=agHoje;
+    document.getElementById('hc-pend').textContent=ordens.filter(o=>o.status==='pendente').length;
+    document.getElementById('hc-cli').textContent=clientes.length;
+    const fatMes=getFechadasMes().reduce((a,o)=>a+parseFloat(o.total||0),0);
+    document.getElementById('hc-fat').textContent=fmtMoeda(fatMes);
+    document.getElementById('home-rodape-fat').textContent='💰 '+fmtMoeda(fatMes)+' em vendas aprovadas esse mês';
+  }
   calcReativacao(false);
   rendFaturamento();
 }
 
 // ============ UI ============
+// ============ FERIADOS NACIONAIS ============
+function calcPascoa(ano){
+  const a=ano%19,b=Math.floor(ano/100),c=ano%100;
+  const d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25);
+  const g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30;
+  const i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7;
+  const m=Math.floor((a+11*h+22*l)/451);
+  const mes=Math.floor((h+l-7*m+114)/31)-1; // 0-indexed
+  const dia=((h+l-7*m+114)%31)+1;
+  return {mes,dia};
+}
+function getFeriados(ano){
+  const p=calcPascoa(ano);
+  const pDate=new Date(ano,p.mes,p.dia);
+  const addDias=(d,n)=>{const dt=new Date(d);dt.setDate(dt.getDate()+n);return dt;};
+  const fmt=dt=>`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  const feriados={};
+  const add=(dt,nome)=>{feriados[fmt(dt)]=nome;};
+  // Fixos
+  add(new Date(ano,0,1),'Confraternização Universal');
+  add(new Date(ano,3,21),'Tiradentes');
+  add(new Date(ano,4,1),'Dia do Trabalho');
+  add(new Date(ano,6,9),'Revolução Constitucionalista');
+  add(new Date(ano,8,7),'Independência do Brasil');
+  add(new Date(ano,9,12),'Nossa Senhora Aparecida');
+  add(new Date(ano,10,2),'Finados');
+  add(new Date(ano,10,15),'Proclamação da República');
+  add(new Date(ano,10,20),'Consciência Negra');
+  add(new Date(ano,11,25),'Natal');
+  // Móveis
+  add(addDias(pDate,-48),'Carnaval');
+  add(addDias(pDate,-47),'Carnaval');
+  add(addDias(pDate,-2),'Sexta-feira Santa');
+  add(pDate,'Páscoa');
+  add(addDias(pDate,60),'Corpus Christi');
+  return feriados;
+}
+
+// ============ HOME CALENDÁRIO ============
+let homeCalAno=new Date().getFullYear();
+let homeCalMes=new Date().getMonth();
+
+function navHomeCalendario(dir){
+  homeCalMes+=dir;
+  if(homeCalMes<0){homeCalMes=11;homeCalAno--;}
+  if(homeCalMes>11){homeCalMes=0;homeCalAno++;}
+  rendCalendarioHome();
+}
+
+function rendCalendarioHome(){
+  const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  document.getElementById('home-cal-titulo').textContent=MESES[homeCalMes]+' '+homeCalAno;
+  const hoje_str=today();
+  const feriados=getFeriados(homeCalAno);
+  const primeiroDia=new Date(homeCalAno,homeCalMes,1).getDay();
+  const diasNoMes=new Date(homeCalAno,homeCalMes+1,0).getDate();
+  const diasAntMes=new Date(homeCalAno,homeCalMes,0).getDate();
+
+  // Agendamentos do mês
+  const agsMes=agendamentos.filter(a=>{
+    if(!a.data)return false;
+    const [ay,am]=a.data.split('-');
+    return parseInt(ay)===homeCalAno&&parseInt(am)-1===homeCalMes&&a.status!=='cancelado';
+  });
+  const mapaAg={};
+  agsMes.forEach(ag=>{
+    const d=parseInt((ag.data||'').split('-')[2]);
+    mapaAg[d]=(mapaAg[d]||0)+1;
+  });
+
+  let html='';
+  // Dias mês anterior
+  for(let i=primeiroDia-1;i>=0;i--){
+    html+=`<div class="home-cal-day outro">${diasAntMes-i}</div>`;
+  }
+  // Dias do mês
+  for(let d=1;d<=diasNoMes;d++){
+    const dStr=homeCalAno+'-'+String(homeCalMes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isHoje=dStr===hoje_str;
+    const temAg=mapaAg[d]>0;
+    const isFer=!!feriados[dStr];
+    let cls='home-cal-day';
+    if(isHoje)cls+=' hoje';
+    if(temAg)cls+=' tem-ag';
+    if(isFer&&!isHoje)cls+=' feriado-dia';
+    html+=`<div class="${cls}" onclick="mudarTab('agenda')">${d}</div>`;
+  }
+  // Completar grade
+  const total=primeiroDia+diasNoMes;
+  const resto=total%7===0?0:7-(total%7);
+  for(let d=1;d<=resto;d++){
+    html+=`<div class="home-cal-day outro">${d}</div>`;
+  }
+  document.getElementById('home-cal-body').innerHTML=html;
+
+  // Feriados do mês
+  const ferDoMes=Object.entries(feriados).filter(([dt])=>{
+    const [ay,am]=dt.split('-');
+    return parseInt(ay)===homeCalAno&&parseInt(am)-1===homeCalMes;
+  }).sort(([a],[b])=>a.localeCompare(b));
+
+  const ferHtml=ferDoMes.length?ferDoMes.map(([dt,nome])=>{
+    const dia=parseInt(dt.split('-')[2]);
+    return `<div class="home-feriado-item"><strong>${String(dia).padStart(2,'0')}</strong>${nome}</div>`;
+  }).join(''):'';
+  document.getElementById('home-feriados-lista').innerHTML=ferHtml;
+}
+
+// ============ RENDER HOME ============
+function rendHome(){
+  // Saudação
+  const h=new Date().getHours();
+  const sauda=h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';
+  const emos=h<12?'☀️':h<18?'🌤️':'🌙';
+  document.getElementById('home-saud-titulo').innerHTML=`${sauda}, <span>Super Clean!</span> ${emos}`;
+  const DIAS=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  const MESES_PT=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const now=new Date();
+  document.getElementById('home-saud-sub').textContent=`Hoje é ${DIAS[now.getDay()]}, ${now.getDate()} de ${MESES_PT[now.getMonth()]} de ${now.getFullYear()}.`;
+
+  // Cards resumo
+  const hj=today();
+  const agHoje=agendamentos.filter(a=>a.data===hj&&a.status!=='cancelado').length;
+  const osPend=ordens.filter(o=>o.status==='pendente').length;
+  const fatMes=getFechadasMes().reduce((a,o)=>a+parseFloat(o.total||0),0);
+  document.getElementById('hc-hoje').textContent=agHoje;
+  document.getElementById('hc-pend').textContent=osPend;
+  document.getElementById('hc-cli').textContent=clientes.length;
+  document.getElementById('hc-fat').textContent=fmtMoeda(fatMes);
+
+  // Rodapé
+  document.getElementById('home-rodape-fat').textContent=`💰 ${fmtMoeda(fatMes)} em vendas aprovadas esse mês`;
+
+  // Calendário
+  homeCalAno=new Date().getFullYear();
+  homeCalMes=new Date().getMonth();
+  rendCalendarioHome();
+}
+
+// ============ WHATSAPP + PDF ============
+function enviarOrcamentoWpp(){
+  if(!osCompartilhar)return;
+  const os=osCompartilhar;
+  const wpp=(os.cliWpp||'').replace(/\D/g,'');
+  const texto=gerarTextoWpp(os);
+  const url=wpp?`https://wa.me/55${wpp}?text=${encodeURIComponent(texto)}`:`https://wa.me/?text=${encodeURIComponent(texto)}`;
+  window.open(url,'_blank');
+  setTimeout(()=>{
+    if(confirm('Deseja também gerar o PDF para enviar na conversa?')){
+      gerarPDF();
+    }
+  },1000);
+}
+
+// ============ ABRIR MODAL CLIENTE ============
+function abrirModalCliente(){
+  mudarTab('clientes');
+  setTimeout(()=>{
+    const btn=document.querySelector('#tab-clientes .btn-g');
+    if(btn)btn.click();
+  },100);
+}
+
 function mudarTab(t){
-  const tabs=['nova-os','agenda','faturamento','clientes','hist','historico','reat','config'];
+  const tabs=['home','nova-os','agenda','faturamento','clientes','hist','historico','reat','config'];
   tabs.forEach((x,i)=>{
     const btn=document.querySelectorAll('.tab')[i];
     if(btn)btn.classList.toggle('active',x===t);
     const el=document.getElementById('tab-'+x);
     if(el)el.classList.toggle('active',x===t);
   });
+  if(t==='home')rendHome();
   if(t==='hist')rendHist();
   if(t==='clientes')rendClientes();
   if(t==='reat')calcReativacao(false);
