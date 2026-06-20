@@ -311,7 +311,6 @@ select option{background:#0a1e38;}
   <div class="tabs">
     <button class="tab active" onclick="mudarTab('home')">🏠 Início</button>
     <button class="tab" onclick="mudarTab('nova-os')">📋 OS</button>
-    <button class="tab" onclick="mudarTab('novo-cliente')">👤 Cliente</button>
     <button class="tab" onclick="mudarTab('agenda')">📅 Agenda</button>
     <button class="tab" onclick="mudarTab('faturamento')">💰 Fat.</button>
     <button class="tab" onclick="mudarTab('clientes')">👥 Clientes</button>
@@ -388,28 +387,6 @@ select option{background:#0a1e38;}
     <!-- Rodapé financeiro -->
     <div class="home-rodape" id="home-rodape-fat">
       💰 R$ 0,00 em vendas aprovadas esse mês
-    </div>
-  </div>
-
-  <!-- ===== TAB: NOVO CLIENTE ===== -->
-  <div id="tab-novo-cliente" class="tbc">
-    <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">👤 Novo Cliente</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Cadastre um novo cliente no sistema</div>
-    <div class="card">
-      <div class="ctitle">👤 Cadastrar Novo Cliente</div>
-      <div class="field">
-        <label>Nome *</label>
-        <input type="text" id="nc2-nome" placeholder="Nome completo">
-      </div>
-      <div class="field">
-        <label>WhatsApp *</label>
-        <input type="text" id="nc2-wpp" placeholder="(67) 99999-9999" oninput="fmtFone2(this)">
-      </div>
-      <div class="field">
-        <label>Bairro / Endereço</label>
-        <input type="text" id="nc2-end" placeholder="Bairro ou rua">
-      </div>
-      <button class="btn btn-g" style="width:100%" onclick="salvarCliente2()">✅ Cadastrar Cliente</button>
     </div>
   </div>
 
@@ -643,6 +620,24 @@ select option{background:#0a1e38;}
 
   <!-- ===== TAB: CLIENTES ===== -->
   <div id="tab-clientes" class="tbc">
+    <!-- Formulário cadastro -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="ctitle">👤 Cadastrar Novo Cliente</div>
+      <div class="field">
+        <label>Nome *</label>
+        <input type="text" id="nc2-nome" placeholder="Nome completo">
+      </div>
+      <div class="field">
+        <label>WhatsApp *</label>
+        <input type="text" id="nc2-wpp" placeholder="(67) 99999-9999" oninput="fmtFone2(this)">
+      </div>
+      <div class="field">
+        <label>Bairro / Endereço</label>
+        <input type="text" id="nc2-end" placeholder="Bairro ou rua">
+      </div>
+      <button class="btn btn-g" style="width:100%" onclick="salvarCliente2()">✅ Cadastrar Cliente</button>
+    </div>
+    <!-- Lista clientes -->
     <div class="card">
       <div class="ctitle">👥 Clientes Cadastrados</div>
       <input type="text" id="cli-busca" placeholder="🔍 Buscar por nome ou telefone..." oninput="debounceRendCli()" style="margin-bottom:14px;">
@@ -2316,10 +2311,13 @@ function enviarOrcamentoWpp(){
 
 // ============ ABRIR MODAL CLIENTE ============
 function abrirModalCliente(){
-  mudarTab('novo-cliente');
+  mudarTab('clientes');
   setTimeout(()=>{
     const el=document.getElementById('nc2-nome');
-    if(el)el.focus();
+    if(el){
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+      el.focus();
+    }
   },150);
 }
 
@@ -2341,6 +2339,8 @@ function salvarCliente2(){
   salvarLocal();
   ['nc2-nome','nc2-wpp','nc2-end'].forEach(id=>document.getElementById(id).value='');
   updStats();rendClientes();
+  // Limpar e focar campo nome para cadastro rápido em sequência
+  setTimeout(()=>document.getElementById('nc2-nome')?.focus(), 100);
   toast('✅ Cliente "'+nome+'" cadastrado!');
   // Perguntar se quer criar OS para esse cliente
   setTimeout(()=>{
@@ -2508,7 +2508,7 @@ function showCloudToast(){
 }
 
 function mudarTab(t){
-  const tabs=['home','nova-os','novo-cliente','agenda','faturamento','clientes','hist','historico','reat','config'];
+  const tabs=['home','nova-os','agenda','faturamento','clientes','hist','historico','reat','config'];
   tabs.forEach((x,i)=>{
     const btn=document.querySelectorAll('.tab')[i];
     if(btn)btn.classList.toggle('active',x===t);
