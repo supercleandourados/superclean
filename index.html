@@ -301,6 +301,10 @@ select option{background:#0a1e38;}
 .dash-next-title{font-size:12px;font-weight:600;color:var(--sky);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;}
 .prox-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .prox-item:last-child{border-bottom:none;}
+
+/* Classes utilitárias — inline styles consolidados */
+.modal-title-h{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;}
+.modal-sub-txt{font-size:13px;color:var(--muted);margin-bottom:20px;}
 </style>
 </head>
 <body>
@@ -330,8 +334,6 @@ select option{background:#0a1e38;}
     <button class="tab" id="tab-btn-reat" onclick="mudarTab('reat')">🔔 Reativar</button>
     <button class="tab" onclick="mudarTab('config')">⚙️ Config.</button>
   </div>
-
-  <!-- ===== TAB: HOME ===== -->
   <div id="tab-home" class="tbc active">
     <!-- Saudação -->
     <div class="home-saudacao">
@@ -416,8 +418,6 @@ select option{background:#0a1e38;}
       💰 R$ 0,00 em vendas aprovadas esse mês
     </div>
   </div>
-
-  <!-- ===== TAB: NOVA OS ===== -->
   <div id="tab-nova-os" class="tbc">
     <div class="g2">
       <div>
@@ -497,8 +497,6 @@ select option{background:#0a1e38;}
       </div>
     </div>
   </div>
-
-  <!-- ===== TAB: AGENDA ===== -->
   <div id="tab-agenda" class="tbc">
 
     <!-- Card Hoje -->
@@ -549,11 +547,9 @@ select option{background:#0a1e38;}
       <div id="agenda-lista"></div>
     </div>
   </div>
-
-  <!-- ===== TAB: FATURAMENTO ===== -->
   <div id="tab-faturamento" class="tbc">
-    <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">💰 Faturamento</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Somente orçamentos aprovados (🟢 Aprovado)</div>
+    <div class="modal-title-h">💰 Faturamento</div>
+    <div class="modal-sub-txt">Somente orçamentos aprovados (🟢 Aprovado)</div>
 
     <!-- KPIs -->
     <div class="fat-kpi">
@@ -637,8 +633,6 @@ select option{background:#0a1e38;}
       <div id="fat-lista-mes"></div>
     </div>
   </div>
-
-  <!-- ===== TAB: CLIENTES ===== -->
   <div id="tab-clientes" class="tbc">
     <!-- Formulário cadastro -->
     <div class="card" style="margin-bottom:16px;">
@@ -691,8 +685,6 @@ select option{background:#0a1e38;}
       </div>
     </div>
   </div>
-
-  <!-- ===== TAB: ORÇAMENTOS DO MÊS ===== -->
   <div id="tab-hist" class="tbc">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
       <div>
@@ -710,23 +702,17 @@ select option{background:#0a1e38;}
     </div>
     <div id="lista-hist"></div>
   </div>
-
-  <!-- ===== TAB: HISTÓRICO COMPLETO ===== -->
   <div id="tab-historico" class="tbc">
-    <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">🗂️ Histórico Completo</div>
+    <div class="modal-title-h">🗂️ Histórico Completo</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Todos os meses arquivados</div>
     <input type="text" class="hist-busca" id="hist-busca" placeholder="🔍 Buscar cliente no histórico..." oninput="debounceRendHist()">
     <div id="lista-historico"></div>
   </div>
-
-  <!-- ===== TAB: REATIVAR ===== -->
   <div id="tab-reat" class="tbc">
-    <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;">🔔 Clientes para Reativar</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;">Clientes com serviço fechado há 6+ meses</div>
+    <div class="modal-title-h">🔔 Clientes para Reativar</div>
+    <div class="modal-sub-txt">Clientes com serviço fechado há 6+ meses</div>
     <div id="lista-reat"></div>
   </div>
-
-  <!-- ===== TAB: CONFIGURAR TIPOS ===== -->
   <div id="tab-config" class="tbc">
 
     <!-- BACKUP & EXPORTAÇÃO -->
@@ -736,6 +722,12 @@ select option{background:#0a1e38;}
         Seus dados ficam salvos na nuvem (Firebase), mas é recomendado manter uma cópia local.
         O backup automático acontece toda semana.
       </p>
+      <!-- Migração de clientes (necessária uma vez) -->
+      <div id="card-migracao" style="background:rgba(255,200,0,.08);border:1px solid rgba(255,200,0,.25);border-radius:10px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:11px;font-weight:700;color:#ffc800;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚡ Migração de Clientes</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">Sincronizar seus <strong style="color:#fff;" id="migracao-qtd">748</strong> clientes para a nuvem na nova estrutura (necessário uma vez).</p>
+        <button class="btn btn-g" onclick="migrarClientesFirebase()" style="width:100%;font-size:13px;" id="btn-migracao">☁️ Sincronizar Clientes na Nuvem</button>
+      </div>
 
       <!-- Status do último backup -->
       <div id="backup-status-card" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
@@ -791,10 +783,6 @@ select option{background:#0a1e38;}
     </div>
   </div>
 </div>
-
-<!-- ===== MODAIS ===== -->
-
-<!-- MODAL CLIENTE -->
 <div class="modal-overlay" id="modal-cli">
   <div class="modal">
     <div class="modal-title">👤 Detalhes do Cliente</div>
@@ -820,8 +808,6 @@ select option{background:#0a1e38;}
     </div>
   </div>
 </div>
-
-<!-- MODAL COMPARTILHAR OS -->
 <div class="modal-overlay" id="modal-share">
   <div class="modal" style="max-width:600px;">
     <div class="modal-title">📤 Compartilhar Orçamento</div>
@@ -867,8 +853,6 @@ select option{background:#0a1e38;}
     <button class="btn btn-o" onclick="fecharModal('modal-share')" style="width:100%;">Fechar</button>
   </div>
 </div>
-
-<!-- MODAL DETALHE DIA AGENDA -->
 <div class="modal-overlay" id="modal-ag-dia">
   <div class="modal" style="max-width:580px;">
     <div class="modal-title" id="modal-ag-dia-title">📅 Serviços do dia</div>
@@ -885,7 +869,7 @@ select option{background:#0a1e38;}
     <div style="text-align:center;margin-bottom:6px;">
       <div style="font-size:48px;margin-bottom:8px;">🔔</div>
       <div class="modal-title" style="margin-bottom:4px;">Clientes para Reativar!</div>
-      <div id="alerta-reat-sub" style="font-size:13px;color:var(--muted);margin-bottom:20px;"></div>
+      <div id="alerta-reat-sub" class="modal-sub-txt"></div>
     </div>
     <div id="alerta-reat-lista" style="max-height:300px;overflow-y:auto;margin-bottom:16px;"></div>
     <div style="display:flex;gap:8px;">
@@ -919,8 +903,6 @@ select option{background:#0a1e38;}
     </div>
   </div>
 </div>
-
-<!-- MODAL REMARCAR AGENDAMENTO -->
 <div class="modal-overlay" id="modal-remarcar">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">📅 Remarcar Agendamento</div>
@@ -950,9 +932,8 @@ select option{background:#0a1e38;}
 <div class="toast" id="toast"><span id="tmsg"></span></div>
 
 <script type="module">
-// ============ FIREBASE CONFIG ============
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCc3kljkXlnp5aL-KcXaCUCRg4ubqB7Z2I",
@@ -966,20 +947,20 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 
-// ID fixo do documento (dados de um único negócio)
-const DOC_ID = 'superclean_dados';
-const REF = doc(db, 'superclean', DOC_ID);
+// Documento principal (dados operacionais — sem clientes)
+const REF = doc(db, 'superclean', 'superclean_dados');
+// Coleção separada para clientes (sem limite de tamanho)
+const CLI_COL = collection(db, 'superclean_clientes');
 
-// Flag para evitar loop save→load→save
 let _fbSaving = false;
 let _fbLoaded = false;
+let _cliSaving = false;
 
-// Salvar todos os dados no Firestore
+// Salvar dados operacionais (ordens, agenda, etc — sem clientes)
 window.fbSalvar = async function() {
   try {
     _fbSaving = true;
     await setDoc(REF, {
-      clientes:     JSON.stringify(window._sc.clientes),
       ordens:       JSON.stringify(window._sc.ordens),
       historico:    JSON.stringify(window._sc.historico),
       agendamentos: JSON.stringify(window._sc.agendamentos),
@@ -998,78 +979,89 @@ window.fbSalvar = async function() {
   }
 };
 
-// Escutar mudanças em tempo real (sync entre dispositivos)
-onSnapshot(REF, (snap) => {
-  if (_fbSaving) return; // Ignore echo do próprio save
-  if (!snap.exists()) return;
-  const d = snap.data();
-  if (!d || !d.clientes) return;
-
-  // Atualizar variáveis globais
+// Salvar clientes na coleção separada (escala sem limite)
+window.fbSalvarClientes = async function(lista) {
+  if (_cliSaving) return;
   try {
-    window._sc.clientes     = JSON.parse(d.clientes     || '[]');
-    window._sc.ordens       = JSON.parse(d.ordens       || '[]');
-    window._sc.historico    = JSON.parse(d.historico    || '[]');
-    window._sc.agendamentos = JSON.parse(d.agendamentos || '[]');
-    window._sc.tipos        = JSON.parse(d.tipos        || 'null') || window._sc.TIPOS_DEFAULT;
-    window._sc.precos       = JSON.parse(d.precos       || '{}');
-    window._sc.mesAtual     = d.mesAtual     || window._sc.mesAtual;
-    window._sc.osCounter    = parseInt(d.osCounter || '0');
-    if(d.meta) window._sc.meta = parseFloat(d.meta||'0');
+    _cliSaving = true;
+    const todos = lista || window._sc.clientes;
+    const BATCH = 500;
+    for (let i = 0; i < todos.length; i += BATCH) {
+      const batch = writeBatch(db);
+      todos.slice(i, i + BATCH).forEach(c => {
+        batch.set(doc(db, 'superclean_clientes', String(c.id)), {
+          id: c.id, nome: c.nome||'', wpp: c.wpp||'', end: c.end||'',
+          criado: c.criado||new Date().toISOString(),
+          origem: c.origem||'', categoria: c.categoria||'',
+          totalGastoHistorico: c.totalGastoHistorico||0
+        });
+      });
+      await batch.commit();
+    }
+    setTimeout(()=>{ _cliSaving = false; }, 500);
+  } catch(e) { _cliSaving = false; console.warn('CLI save error:', e); }
+};
 
-    // Também salvar no localStorage como cache offline
-    localStorage.setItem('sc_clientes',   d.clientes);
-    localStorage.setItem('sc_ordens',     d.ordens);
-    localStorage.setItem('sc_historico',  d.historico);
-    localStorage.setItem('sc_agenda',     d.agendamentos);
-    localStorage.setItem('sc_tipos',      d.tipos);
-    localStorage.setItem('sc_precos',     d.precos);
-    localStorage.setItem('sc_mes_atual',  d.mesAtual);
-    localStorage.setItem('sc_os_counter', d.osCounter);
-    if(d.meta) localStorage.setItem('sc_meta', d.meta);
+// Carregar clientes da coleção
+window.fbCarregarClientes = async function() {
+  try {
+    const snap = await getDocs(CLI_COL);
+    if (snap.empty) return null;
+    const lista = [];
+    snap.forEach(d => lista.push(d.data()));
+    return lista.sort((a,b) => (a.nome||'').localeCompare(b.nome||'', 'pt-BR'));
+  } catch(e) { console.warn('CLI load error:', e); return null; }
+};
 
-    // Re-renderizar se o app já estiver iniciado
+// Escutar mudanças operacionais em tempo real
+onSnapshot(REF, (snap) => {
+  if (_fbSaving || !snap.exists()) return;
+  const d = snap.data();
+  if (!d) return;
+  try {
+    if(d.ordens)       { window._sc.ordens       = JSON.parse(d.ordens);       localStorage.setItem('sc_ordens',     d.ordens); }
+    if(d.historico)    { window._sc.historico    = JSON.parse(d.historico);    localStorage.setItem('sc_historico',  d.historico); }
+    if(d.agendamentos) { window._sc.agendamentos = JSON.parse(d.agendamentos); localStorage.setItem('sc_agenda',     d.agendamentos); }
+    if(d.tipos)        { window._sc.tipos        = JSON.parse(d.tipos)||window._sc.TIPOS_DEFAULT; localStorage.setItem('sc_tipos', d.tipos); }
+    if(d.precos)       { window._sc.precos       = JSON.parse(d.precos);       localStorage.setItem('sc_precos',     d.precos); }
+    if(d.mesAtual)     { window._sc.mesAtual     = d.mesAtual;                 localStorage.setItem('sc_mes_atual',  d.mesAtual); }
+    if(d.osCounter)    { window._sc.osCounter    = parseInt(d.osCounter||'0'); localStorage.setItem('sc_os_counter', d.osCounter); }
+    if(d.meta)         { window._sc.meta         = parseFloat(d.meta||'0');    localStorage.setItem('sc_meta',       d.meta); }
     if (_fbLoaded && window.scRender) {
-      // Usar requestAnimationFrame para não bloquear UI
       if(window._renderPending) return;
       window._renderPending = true;
-      requestAnimationFrame(()=>{
-        window.scRender();
-        window._renderPending = false;
-      });
+      requestAnimationFrame(()=>{ window.scRender(); window._renderPending = false; });
     }
     _fbLoaded = true;
-  } catch(e) {
-    console.warn('Firebase load error:', e);
-  }
+  } catch(e) { console.warn('Firebase sync error:', e); }
 });
 
-// Carregar dados iniciais do Firebase (primeira vez)
-getDoc(REF).then(snap => {
+// Carga inicial — operacional + clientes em paralelo
+Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]) => {
   if (snap.exists()) {
     const d = snap.data();
-    // Aplicar no localStorage para o app carregar
-    if (d.clientes)     localStorage.setItem('sc_clientes',   d.clientes);
-    if (d.ordens)       localStorage.setItem('sc_ordens',     d.ordens);
-    if (d.historico)    localStorage.setItem('sc_historico',  d.historico);
-    if (d.agendamentos) localStorage.setItem('sc_agenda',     d.agendamentos);
-    if (d.tipos)        localStorage.setItem('sc_tipos',      d.tipos);
-    if (d.precos)       localStorage.setItem('sc_precos',     d.precos);
-    if (d.mesAtual)     localStorage.setItem('sc_mes_atual',  d.mesAtual);
-    if (d.osCounter)    localStorage.setItem('sc_os_counter', d.osCounter);
+    if(d.ordens)       localStorage.setItem('sc_ordens',     d.ordens);
+    if(d.historico)    localStorage.setItem('sc_historico',  d.historico);
+    if(d.agendamentos) localStorage.setItem('sc_agenda',     d.agendamentos);
+    if(d.tipos)        localStorage.setItem('sc_tipos',      d.tipos);
+    if(d.precos)       localStorage.setItem('sc_precos',     d.precos);
+    if(d.mesAtual)     localStorage.setItem('sc_mes_atual',  d.mesAtual);
+    if(d.osCounter)    localStorage.setItem('sc_os_counter', d.osCounter);
+    if(d.meta)         localStorage.setItem('sc_meta',       d.meta);
   }
-  // Sinalizar que pode iniciar o app
+  if (clientesFB && clientesFB.length > 0) {
+    localStorage.setItem('sc_clientes', JSON.stringify(clientesFB));
+  }
   window._fbReady = true;
   document.dispatchEvent(new Event('fb-ready'));
 }).catch(e => {
-  console.warn('Firebase getDoc error:', e);
+  console.warn('Firebase init error:', e);
   window._fbReady = true;
   document.dispatchEvent(new Event('fb-ready'));
 });
 </script>
 
 <script>
-// ============ TIPOS E SERVIÇOS ============
 const TIPOS_DEFAULT=[
   'Sofá Retrátil 2 lugares','Sofá Retrátil 3 lugares','Sofá Retrátil 4 lugares','Sofá Retrátil 5 lugares','Sofá Retrátil 6+ lugares',
   'Sofá Fixo 2 lugares','Sofá Fixo 3 lugares','Sofá Fixo 4 lugares','Sofá Fixo 5 lugares','Sofá Fixo 6+ lugares',
@@ -1079,8 +1071,6 @@ const TIPOS_DEFAULT=[
 ];
 const SERVICOS={hig:'Higienização',imp:'Impermeabilização',amb:'Hig. + Imper.'};
 const PRECO_DEFAULT={hig:100,imp:80,amb:170};
-
-// ============ MENSAGENS DE REATIVAÇÃO (10 variações) ============
 const MSGS_REAT=[
   (nome)=>`Olá, ${nome}! 👋\n\nJá faz algum tempo desde sua última higienização conosco.\n\nCom o passar dos meses, *ácaros, fungos, bactérias* e sujeiras invisíveis voltam a se acumular nos estofados, podendo causar alergias e desconfortos para toda a família. 😷\n\nComo você já é cliente da *SUPER CLEAN - Higienização*, liberamos uma *condição especial de retorno*.\n\n🎁 *Desconto exclusivo para clientes antigos.*\n\nEssa condição ficará disponível por tempo limitado.\n\nGostaria de receber uma nova avaliação sem compromisso? Será um prazer atender você novamente! 🛋️✨\n\n📞 (67) 99816-6182\n🌐 supercleandourados.com.br`,
 
@@ -1102,8 +1092,6 @@ const MSGS_REAT=[
 
   (nome)=>`Oi, ${nome}! 👋 Saudades! 💙\n\nA equipe da *SUPER CLEAN - Higienização* preparou uma surpresa pra você!\n\nNossos clientes especiais merecem cuidados especiais. Por isso, você tem acesso a uma *condição VIP de retorno* com desconto exclusivo!\n\n🛋️ Sofás\n🛏️ Colchões\n🪑 Cadeiras e Poltronas\n\nÁcaros, fungos e bactérias não tiram folga — mas a nossa equipe cuida de tudo! 💪\n\nQuer garantir sua agenda? Manda uma mensagem! 📲\n\nEsperamos você de volta! 🧹✨\n\n📞 (67) 99816-6182\n🌐 supercleandourados.com.br`
 ];
-
-// ============ ESTADO ============
 let ic=0;
 let clientes   = [];
 let ordens     = [];
@@ -1145,6 +1133,7 @@ window._sc = {
 // Função de re-render global para o Firebase listener
 window.showCloudToast = function(){ showCloudToast(); };
 window.scRender = function() {
+  invalidarCatCache(); // dados mudaram — limpar cache de categorias
   updStats();
   document.getElementById('hmes').textContent = getMesLabel(mesAtual);
   // Re-renderizar apenas a aba ativa
@@ -1159,8 +1148,6 @@ window.scRender = function() {
   else if(t==='faturamento')rendFaturamento();
   else if(t==='nova-os')rendProxServicos();
 };
-
-// ============ HELPERS ============
 function getMesKey(){
   const d=new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
@@ -1181,8 +1168,6 @@ function getPreco(tipo,srv){
   return PRECO_DEFAULT[srv]||80;
 }
 function hoje(){return new Date().toISOString().split('T')[0];}
-
-// ============ INIT ============
 function init(){
   // Aguardar Firebase carregar dados antes de renderizar
   function _startApp() {
@@ -1229,9 +1214,12 @@ function init(){
     setTimeout(()=>{ if(!window._fbReady){ window._fbReady=true; _startApp(); } }, 3000);
   }
 }
+// Flag para controlar quando clientes mudaram (evita salvar na coleção desnecessariamente)
+let _clientesMudaram = false;
 
-// ============ SALVAR ============
-function salvarLocal(){
+function salvarLocal(clientesMudaram){
+  if(typeof invalidarCatCache==='function') invalidarCatCache();
+  _statsReatKey = '';
   localStorage.setItem('sc_clientes',   JSON.stringify(clientes));
   localStorage.setItem('sc_ordens',     JSON.stringify(ordens));
   localStorage.setItem('sc_historico',  JSON.stringify(historico));
@@ -1240,16 +1228,18 @@ function salvarLocal(){
   localStorage.setItem('sc_precos',     JSON.stringify(precos));
   localStorage.setItem('sc_mes_atual',  mesAtual);
   localStorage.setItem('sc_os_counter', String(osCounter));
-  // Salvar na nuvem Firebase
+  // Salvar dados operacionais sempre
   if (window.fbSalvar) window.fbSalvar();
+  // Salvar clientes na coleção separada só quando mudam
+  if (clientesMudaram && window.fbSalvarClientes) {
+    window.fbSalvarClientes();
+  }
 }
-
-// ============ CLIENTE ============
 function _salvarClienteCommon(nome, wpp, end, cbClear){
   if(!nome){toast('⚠️ Nome obrigatório',true);return false;}
   if(!wpp){toast('⚠️ WhatsApp obrigatório',true);return false;}
   clientes.push({id:Date.now(),nome,wpp,end,criado:new Date().toISOString()});
-  salvarLocal();
+  salvarLocal(true);
   if(cbClear)cbClear();
   updStats();rendClientes();
   toast('✅ Cliente "'+nome+'" cadastrado!');
@@ -1274,9 +1264,6 @@ function buscaCliente(q){
   list.style.display='block';
 }
 
-function _cadastrarNovoRapido_DEPRECATED(nome){
-  // substituída pela versão com modal - ver abaixo
-}
 function selecionarCliente(id){
   const c=clientes.find(x=>x.id===id);if(!c)return;
   cliSelecionado=c;
@@ -1293,18 +1280,42 @@ function limparCliente(){
   document.getElementById('cli-input').value='';
   document.getElementById('cli-selecionado').style.display='none';
 }
-// ============ CLIENTES — PAGINAÇÃO + CATEGORIAS ============
 let _cliPagina = 0;
 let _cliCatFiltro = 'todos';
 const CLI_POR_PAG = 30;
 
-function getCategoriaCli(c) {
-  // Prioridade: categoria importada > calculada pelo histórico de OS
-  if (c.categoria) return c.categoria;
+// Cache de categorias — recalculado só quando dados mudam
+let _catCache = null;
+let _catCacheKey = '';
+
+function _buildCatCache() {
+  const key = clientes.length + '|' + ordens.length + '|' + historico.length;
+  if (_catCache && _catCacheKey === key) return _catCache;
+  // Montar mapa cliId → total gasto em OS aprovadas
   const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
-  const osC = todasOS.filter(o => o.cliId === c.id && o.status === 'aprovado');
-  const total = osC.reduce((a, o) => a + parseFloat(o.total || 0), 0);
-  if (osC.length === 0) return 'novo';
+  const mapaTotal = {};
+  const mapaCount = {};
+  todasOS.forEach(o => {
+    if (o.status === 'aprovado') {
+      mapaTotal[o.cliId] = (mapaTotal[o.cliId] || 0) + parseFloat(o.total || 0);
+      mapaCount[o.cliId] = (mapaCount[o.cliId] || 0) + 1;
+    }
+  });
+  _catCache = { mapaTotal, mapaCount };
+  _catCacheKey = key;
+  return _catCache;
+}
+
+function invalidarCatCache() { _catCache = null; _catCacheKey = ''; }
+
+function getCategoriaCli(c) {
+  // Prioridade: categoria importada (campo direto no objeto)
+  if (c.categoria && c.categoria !== 'ativo') return c.categoria;
+  // Calcular pelo histórico de OS usando cache
+  const { mapaTotal, mapaCount } = _buildCatCache();
+  const total = (mapaTotal[c.id] || 0) + (c.totalGastoHistorico || 0);
+  const count = mapaCount[c.id] || 0;
+  if (total === 0 && count === 0) return c.categoria || 'novo';
   if (total >= 1000) return 'vip';
   if (total >= 500) return 'frequente';
   return 'ativo';
@@ -1476,15 +1487,11 @@ function verCliente(id){
   document.getElementById('btn-excluir-cli').onclick=()=>excluirCliente(id);
   abrirModal('modal-cli');
 }
-function _excluirCliente_DEPRECATED(id){
-  // substituída pela versão com modal - ver abaixo
-}
+
 function novaOsCliente(id){
   fecharModal('modal-cli');mudarTab('nova-os');
   setTimeout(()=>selecionarCliente(id),100);
 }
-
-// ============ ITENS ============
 function buildTipoOpts(){
   return tipos.map(t=>`<option value="${t}">${t}</option>`).join('');
 }
@@ -1557,8 +1564,6 @@ function getItensList(){
   });
   return arr;
 }
-
-// ============ SALVAR OS ============
 function salvarOS(){
   if(!cliSelecionado){toast('⚠️ Selecione um cliente',true);return;}
   const itens=getItensList();
@@ -1603,8 +1608,6 @@ function salvarOS(){
   document.getElementById('os-num-badge').textContent='OS #'+String(osCounter+1).padStart(4,'0');
   updStats();rendProxServicos();
 }
-
-// ============ COMPARTILHAR ============
 function abrirCompartilhar(osId){
   const todas=[...ordens,...historico.flatMap(m=>m.ordens||[])];
   const os=todas.find(o=>o.id===osId);if(!os)return;
@@ -1753,8 +1756,6 @@ function abrirWpp(){
   const f=(osCompartilhar.cliWpp||'').replace(/\D/g,'');
   window.open('https://wa.me/'+(f?'55'+f:'')+'?text='+encodeURIComponent(txt),'_blank');
 }
-
-// ============ PDF ============
 function gerarPDF(){
   if(!osCompartilhar)return;
   const _logoSrc=(document.getElementById('logo-master')||{}).src||'';
@@ -1891,8 +1892,6 @@ function gerarPDF(){
   };
   toast('🖨️ Caixa de impressão aberta — escolha "Salvar como PDF"');
 }
-
-// ============ RENDER OS ============
 function renderOS(o,comActions){
   const sc={pendente:'sp',aprovado:'sf',recusado:'sr',cancelado:'st-canc'}[o.status]||'sp';
   const dt=new Date(o.dataCriacao).toLocaleDateString('pt-BR');
@@ -1937,16 +1936,6 @@ function rendHist(resetPage){
   }
   lista.innerHTML=html;
 }
-
-function _updStatus_DEPRECATED(id,s){
-  // substituída pela versão com modal - ver abaixo
-}
-
-function _delOS_DEPRECATED(id){
-  // substituída pela versão com modal - ver abaixo
-}
-
-// ============ AGENDA ============
 function navAgenda(dir){
   agendaMes+=dir;
   if(agendaMes>11){agendaMes=0;agendaAno++;}
@@ -2118,18 +2107,6 @@ function buildAgCard(ag,noModal){
     </div>
   </div>`;
 }
-
-function _remarcarAg_DEPRECATED(agId){
-  // substituída pela versão com modal - ver abaixo
-}
-function _cancelarAg_DEPRECATED(agId){
-  // substituída pela versão com modal - ver abaixo
-}
-function _excluirAg_DEPRECATED(agId){
-  // substituída pela versão com modal - ver abaixo
-}
-
-// ============ FATURAMENTO ============
 function getFechadasMes(){
   return ordens.filter(o=>o.status==='aprovado'&&o.mes===mesAtual);
 }
@@ -2211,8 +2188,6 @@ function rendGrafico(todasFech){
     </div>`;
   }).join('');
 }
-
-// ============ PRÓXIMOS SERVIÇOS ============
 function rendProxServicos(){
   const el=document.getElementById('prox-servicos');
   if(!el)return;
@@ -2238,8 +2213,6 @@ function amanha(){
   const d=new Date();d.setDate(d.getDate()+1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-
-// ============ HISTÓRICO COMPLETO ============
 function rendHistoricoCompleto(){
   const buscaEl=document.getElementById('hist-busca');
   const busca=(buscaEl?.value||'').toLowerCase().trim();
@@ -2261,8 +2234,6 @@ function rendHistoricoCompleto(){
     </div>`;
   }).join('');
 }
-
-// ============ VIRAR MÊS ============
 function confirmarVirarMes(){abrirModal('modal-virar');}
 function virarMes(){
   const arquivo={mesKey:mesAtual,ordens:[...ordens],arquivadoEm:new Date().toISOString()};
@@ -2276,8 +2247,6 @@ function virarMes(){
   rendHist();rendHistoricoCompleto();updStats();rendFaturamento();
   toast('✅ Mês virado! Agora: '+getMesLabel(mesAtual));
 }
-
-// ============ REATIVAÇÃO ============
 function buildReatCard(r,agora){
   const d=Math.floor((agora-r.data)/(24*60*60*1000));
   const m=(d/30).toFixed(1);const v=d>210;
@@ -2337,8 +2306,6 @@ function calcReativacao(mostrarAlerta){
     abrirModal('modal-alerta-reat');
   }
 }
-
-// ============ TIPOS (CONFIG) ============
 function rendTipos(){
   const el=document.getElementById('tipos-lista');if(!el)return;
   el.innerHTML=tipos.map((t,i)=>`<span class="tipo-tag">${t}<button onclick="rmTipo(${i})" title="Remover">✕</button></span>`).join('');
@@ -2356,9 +2323,7 @@ function addTipo(){
   });
   toast('✅ Tipo adicionado!');
 }
-function _rmTipo_DEPRECATED(i){
-  // substituída pela versão com modal - ver abaixo
-}
+
 function rendPrecosTabela(){
   const el=document.getElementById('precos-tabela');if(!el)return;
   const srvs=Object.entries(SERVICOS);
@@ -2382,11 +2347,11 @@ function setPreco(tipo,srv,val){
   precos[tipo+'__'+srv]=v;
   salvarLocal();
 }
+let _statsReatCache = null;
+let _statsReatKey = '';
 
-// ============ STATS ============
 function updStats(){
   const fechadas=ordens.filter(o=>o.status==='aprovado');
-  // Stats ocultos (compatibilidade)
   document.getElementById('st').textContent=ordens.length;
   document.getElementById('sf').textContent=fechadas.length;
   document.getElementById('sc').textContent=clientes.length;
@@ -2396,7 +2361,6 @@ function updStats(){
   const em7str=em7.getFullYear()+'-'+String(em7.getMonth()+1).padStart(2,'0')+'-'+String(em7.getDate()).padStart(2,'0');
   const agSem=agendamentos.filter(a=>a.data>=hj&&a.data<=em7str&&a.status!=='cancelado');
   document.getElementById('s-agenda-sem').textContent=agSem.length;
-  // Atualizar home cards se existirem
   const hcHoje=document.getElementById('hc-hoje');
   if(hcHoje){
     const agHoje=agendamentos.filter(a=>a.data===hj&&a.status!=='cancelado').length;
@@ -2406,29 +2370,34 @@ function updStats(){
     document.getElementById('hc-cli').textContent=clientes.length;
     const fechadasMes=getFechadasMes();
     const fatMes=fechadasMes.reduce((a,o)=>a+parseFloat(o.total||0),0);
-    const todasFech=[...ordens,...historico.flatMap(m=>m.ordens||[])].filter(o=>o.status==='aprovado');
-    const ticketMedio=todasFech.length?todasFech.reduce((a,o)=>a+parseFloat(o.total||0),0)/todasFech.length:0;
     document.getElementById('hc-fat').textContent=fmtMoeda(fatMes);
     document.getElementById('home-rodape-fat').textContent='💰 '+fmtMoeda(fatMes)+' em vendas aprovadas esse mês';
-    // Novos cards
     const hcAmanha=document.getElementById('hc-amanha');
     if(hcAmanha)hcAmanha.textContent=agAmanha;
-    const hcTicket=document.getElementById('hc-ticket');
-    if(hcTicket)hcTicket.textContent=fmtMoeda(ticketMedio);
     const hcAprov=document.getElementById('hc-aprov');
     if(hcAprov)hcAprov.textContent=fechadasMes.length;
-    // Reativação (calc rápido sem re-render da lista)
-    const agora=new Date();const seisM=183*24*60*60*1000;
-    const todasAp=[...ordens,...historico.flatMap(m=>m.ordens||[])].filter(o=>o.status==='aprovado');
-    const mapaR={};todasAp.forEach(o=>{const df=new Date(o.dataFechamento||o.dataCriacao);if(!mapaR[o.cliId]||df>mapaR[o.cliId])mapaR[o.cliId]=df;});
-    const qtdReat=Object.values(mapaR).filter(d=>agora-d>=seisM).length;
-    const hcReat=document.getElementById('hc-reat');
-    if(hcReat)hcReat.textContent=qtdReat;
+    const ticketMedio=fechadas.length?fechadas.reduce((a,o)=>a+parseFloat(o.total||0),0)/fechadas.length:0;
+    const hcTicket=document.getElementById('hc-ticket');
+    if(hcTicket)hcTicket.textContent=fmtMoeda(ticketMedio);
+    // Reativação: calcular em background para não travar a UI
+    const reatKey=ordens.length+'|'+historico.length;
+    if(_statsReatKey!==reatKey){
+      setTimeout(()=>{
+        const agora=new Date();const seisM=183*24*60*60*1000;
+        const todasAp=[...ordens,...historico.flatMap(m=>m.ordens||[])].filter(o=>o.status==='aprovado');
+        const mapaR={};
+        todasAp.forEach(o=>{const df=new Date(o.dataFechamento||o.dataCriacao);if(!mapaR[o.cliId]||df>mapaR[o.cliId])mapaR[o.cliId]=df;});
+        _statsReatCache=Object.values(mapaR).filter(d=>agora-d>=seisM).length;
+        _statsReatKey=reatKey;
+        const hcReat=document.getElementById('hc-reat');
+        if(hcReat)hcReat.textContent=_statsReatCache;
+      },100);
+    } else {
+      const hcReat=document.getElementById('hc-reat');
+      if(hcReat&&_statsReatCache!==null)hcReat.textContent=_statsReatCache;
+    }
   }
-  // rendFaturamento é chamado via mudarTab (lazy)
 }
-
-// ============ UI ============
 // ============ DEBOUNCE & PERFORMANCE ============
 window._renderPending = false;
 
@@ -2442,8 +2411,6 @@ function debounce(fn, delay){
 const debounceBusca = debounce(buscaCliente, 250);
 const debounceRendCli = debounce(rendClientes, 300);
 const debounceRendHist = debounce(rendHistoricoCompleto, 300);
-
-// ============ FERIADOS NACIONAIS ============
 
 function calcPascoa(ano){
   const a=ano%19,b=Math.floor(ano/100),c=ano%100;
@@ -2481,8 +2448,6 @@ function getFeriados(ano){
   add(addDias(pDate,60),'Corpus Christi');
   return feriados;
 }
-
-// ============ HOME CALENDÁRIO ============
 let homeCalAno=new Date().getFullYear();
 let homeCalMes=new Date().getMonth();
 
@@ -2551,8 +2516,6 @@ function rendCalendarioHome(){
   }).join(''):'';
   document.getElementById('home-feriados-lista').innerHTML=ferHtml;
 }
-
-// ============ RENDER HOME ============
 function rendHome(){
   // Saudação
   const h=new Date().getHours();
@@ -2582,8 +2545,6 @@ function rendHome(){
   homeCalMes=new Date().getMonth();
   rendCalendarioHome();
 }
-
-// ============ WHATSAPP + PDF ============
 function enviarOrcamentoWpp(){
   if(!osCompartilhar)return;
   const os=osCompartilhar;
@@ -2592,8 +2553,6 @@ function enviarOrcamentoWpp(){
   const url=wpp?`https://wa.me/55${wpp}?text=${encodeURIComponent(texto)}`:`https://wa.me/?text=${encodeURIComponent(texto)}`;
   window.open(url,'_blank');
 }
-
-// ============ ABRIR MODAL CLIENTE ============
 function abrirModalCliente(){
   mudarTab('clientes');
   setTimeout(()=>{
@@ -2604,17 +2563,12 @@ function abrirModalCliente(){
     }
   },150);
 }
-
-// ============ ABA NOVO CLIENTE ============
 function fmtFone2(el){
   let v=el.value.replace(/\D/g,'');
   if(v.length<=10)v=v.replace(/(\d{2})(\d{4})(\d*)/,'($1) $2-$3');
   else v=v.replace(/(\d{2})(\d{5})(\d*)/,'($1) $2-$3');
   el.value=v;
 }
-
-
-// ============ DUPLICAR OS ============
 function duplicarOS(id){
   const orig=ordens.find(o=>o.id===id);
   if(!orig)return;
@@ -2636,8 +2590,6 @@ function duplicarOS(id){
   toast('📋 OS #'+String(nova.numero).padStart(4,'0')+' criada como duplicata!');
   setTimeout(()=>abrirCompartilhar(nova.id),300);
 }
-
-// ============ META MENSAL ============
 function salvarMeta(){
   const v=parseFloat(document.getElementById('meta-input').value)||0;
   localStorage.setItem('sc_meta',String(v));
@@ -2668,8 +2620,6 @@ function rendMeta(){
   document.getElementById('meta-atual-label').textContent=fmtMoeda(fat);
   document.getElementById('meta-total-label').textContent='Meta: '+fmtMoeda(meta);
 }
-
-// ============ RANKING ============
 function rendRankings(){
   const mes=getFechadasMes();
   // Ranking serviços
@@ -2701,8 +2651,6 @@ function rendRankings(){
       <div class="rank-val">${q}x</div>
     </div>`).join(''):'<div class="empty">Sem dados este mês</div>';
 }
-
-// ============ NOVOS VS RETORNO ============
 function rendCliTipo(){
   const mes=getFechadasMes();
   const cliIds=mes.map(o=>o.cliId);
@@ -2721,8 +2669,6 @@ function rendCliTipo(){
   if(elN)elN.textContent=novos;
   if(elR)elR.textContent=retorno;
 }
-
-// ============ CARD HOJE AGENDA ============
 function rendCardHoje(){
   const hj=today();
   const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
@@ -2748,11 +2694,7 @@ function rendCardHoje(){
     </div>`;
   }).join('');
 }
-
-// ============ BUSCA HISTÓRICO ============
 // rendHistoricoCompleto já existe — vamos sobrescrever com filtro de busca
-
-// ============ FILTRO MÊS ============
 let filtroMesAtual='todos';
 function setFiltroMes(status,btn){
   filtroMesAtual=status;
@@ -2763,8 +2705,6 @@ function setFiltroMes(status,btn){
   if(btn)btn.classList.add(classMap[status]||'ativo');
   rendHist(true);
 }
-
-// ============ CLOUD TOAST ============
 function showCloudToast(){
   const el=document.getElementById('cloud-toast');
   if(!el)return;
@@ -2814,8 +2754,6 @@ function toast(msg,err){
   el.style.borderColor=err?'#ff6b6b':'var(--green)';
   el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4000);
 }
-
-// ============ MODAL CONFIRMAÇÃO GENÉRICO ============
 function confirmar(titulo, msg, labelOk, classOk, cb){
   document.getElementById('modal-confirm-title').textContent=titulo;
   document.getElementById('modal-confirm-msg').textContent=msg;
@@ -2826,17 +2764,13 @@ function confirmar(titulo, msg, labelOk, classOk, cb){
   document.getElementById('modal-confirm-cancel').onclick=()=>fecharModal('modal-confirm');
   abrirModal('modal-confirm');
 }
-
-// ============ SUBSTITUIÇÃO: excluirCliente com modal ============
 function excluirCliente(id){
   confirmar('🗑️ Excluir Cliente','Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.','🗑️ Excluir','btn-d',()=>{
     clientes=clientes.filter(c=>c.id!==id);
-    salvarLocal();fecharModal('modal-cli');rendClientes();updStats();
+    salvarLocal(true);fecharModal('modal-cli');rendClientes();updStats();
     toast('🗑️ Cliente excluído');
   });
 }
-
-// ============ SUBSTITUIÇÃO: delOS com modal ============
 function delOS(id){
   confirmar('🗑️ Excluir OS','Tem certeza que deseja excluir esta OS?','🗑️ Excluir','btn-d',()=>{
     const numId=Number(id);
@@ -2846,8 +2780,6 @@ function delOS(id){
     toast('🗑️ OS excluída');
   });
 }
-
-// ============ SUBSTITUIÇÃO: cancelarAg com modal ============
 function cancelarAg(agId){
   confirmar('❌ Cancelar Agendamento','Tem certeza que deseja cancelar este agendamento?','❌ Cancelar','btn-d',()=>{
     const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
@@ -2858,8 +2790,6 @@ function cancelarAg(agId){
     toast('❌ Agendamento cancelado');
   });
 }
-
-// ============ SUBSTITUIÇÃO: excluirAg com modal ============
 function excluirAg(agId){
   confirmar('🗑️ Excluir Agendamento','Excluir permanentemente este agendamento?','🗑️ Excluir','btn-d',()=>{
     agendamentos=agendamentos.filter(a=>a.id!==agId);
@@ -2869,8 +2799,6 @@ function excluirAg(agId){
     toast('🗑️ Agendamento excluído');
   });
 }
-
-// ============ SUBSTITUIÇÃO: rmTipo com modal ============
 function rmTipo(i){
   confirmar('🗑️ Remover Tipo',`Remover "${tipos[i]}"?`,'🗑️ Remover','btn-d',()=>{
     tipos.splice(i,1);salvarLocal();
@@ -2878,8 +2806,6 @@ function rmTipo(i){
     toast('🗑️ Tipo removido');
   });
 }
-
-// ============ SUBSTITUIÇÃO: remarcarAg com modal ============
 function remarcarAg(agId){
   const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
   document.getElementById('modal-remarcar-data').value=ag.data||today();
@@ -2896,8 +2822,6 @@ function remarcarAg(agId){
   };
   abrirModal('modal-remarcar');
 }
-
-// ============ SUBSTITUIÇÃO: updStatus com modal para aprovação ============
 function updStatus(id,s){
   const os=ordens.find(o=>o.id===id);if(!os)return;
   const antigo=os.status;
@@ -2944,8 +2868,6 @@ function updStatus(id,s){
   const msgs={recusado:'🔴 Recusado.',cancelado:'⚫ Cancelado.',pendente:'🟡 Pendente.'};
   toast(msgs[s]||'✅ Status atualizado.');
 }
-
-// ============ SUBSTITUIÇÃO: cadastrarNovoRapido com modal ============
 function cadastrarNovoRapido(nome){
   document.getElementById('modal-cad-rapido-nome-label').textContent='Cadastrando: "'+nome+'"';
   document.getElementById('modal-cad-rapido-wpp').value='';
@@ -2956,7 +2878,7 @@ function cadastrarNovoRapido(nome){
     if(!wpp||wpp.replace(/\D/g,'').length<8){toast('⚠️ WhatsApp necessário para cadastrar',true);return;}
     const cli={id:Date.now(),nome:nome.trim(),wpp:wpp.trim(),end,criado:new Date().toISOString()};
     clientes.push(cli);
-    salvarLocal();updStats();
+    salvarLocal(true);updStats();
     selecionarCliente(cli.id);
     document.getElementById('ac-list').style.display='none';
     fecharModal('modal-cad-rapido');
@@ -2964,8 +2886,6 @@ function cadastrarNovoRapido(nome){
   };
   abrirModal('modal-cad-rapido');
 }
-
-// ============ SUBSTITUIÇÃO: salvarCliente2 sem confirm() ============
 function salvarCliente2(){
   const nome=document.getElementById('nc2-nome').value.trim();
   const wpp=document.getElementById('nc2-wpp').value.trim();
@@ -2979,8 +2899,6 @@ function salvarCliente2(){
 // Listener para data/hora de agendamento no modal share
 document.getElementById('share-data-ag').addEventListener('change',atualizarAgendamentoDia);
 document.getElementById('share-hora-ag').addEventListener('change',atualizarAgendamentoDia);
-
-// ============ SISTEMA DE BACKUP ============
 
 // Chave para controle de backup automático
 const BACKUP_KEY = 'sc_ultimo_backup';
@@ -3003,6 +2921,25 @@ function getDadosCompletos() {
 }
 
 // ---- EXPORTAR JSON ----
+async function migrarClientesFirebase() {
+  const btn = document.getElementById('btn-migracao');
+  const card = document.getElementById('card-migracao');
+  if (!window.fbSalvarClientes) {
+    toast('⚠️ Firebase não conectado ainda. Aguarde e tente novamente.', true);
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronizando...'; }
+  try {
+    await window.fbSalvarClientes(clientes);
+    localStorage.setItem('sc_clientes_migrados', '1');
+    if (card) card.style.display = 'none';
+    toast(`✅ ${clientes.length} clientes sincronizados na nuvem!`);
+  } catch(e) {
+    toast('❌ Erro na sincronização. Tente novamente.', true);
+    if (btn) { btn.disabled = false; btn.textContent = '☁️ Sincronizar Clientes na Nuvem'; }
+  }
+}
+
 function exportarJSON(silencioso) {
   try {
     const dados = getDadosCompletos();
@@ -3033,24 +2970,35 @@ function exportarExcel() {
     const dataStr = new Date().toISOString().slice(0,10);
     const linhasClientes = [
       ['=== CLIENTES ==='],
-      ['Nome', 'WhatsApp', 'Endereço', 'Cadastrado em', 'Total OS', 'Total Gasto (R$)', 'Último Serviço'],
+      ['Nome', 'WhatsApp', 'Endereço', 'Cadastrado em', 'Total OS', 'Total Gasto (R$)', 'Último Serviço', 'Categoria'],
     ];
     const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
+    // Montar mapa cliId → dados (UMA iteração para todos os clientes)
+    const mapaOS = {};
+    todasOS.forEach(o => {
+      if (!mapaOS[o.cliId]) mapaOS[o.cliId] = { total: 0, count: 0, ultima: null };
+      mapaOS[o.cliId].count++;
+      if (o.status === 'aprovado') {
+        mapaOS[o.cliId].total += parseFloat(o.total || 0);
+        const df = new Date(o.dataFechamento || o.dataCriacao);
+        if (!mapaOS[o.cliId].ultima || df > mapaOS[o.cliId].ultima) mapaOS[o.cliId].ultima = df;
+      }
+    });
     clientes.forEach(c => {
-      const osCliente = todasOS.filter(o => o.cliId === c.id);
-      const osAprov = osCliente.filter(o => o.status === 'aprovado');
-      const totalGasto = osAprov.reduce((a, o) => a + parseFloat(o.total || 0), 0);
-      const ultima = osAprov.length ? osAprov.reduce((a, b) =>
-        new Date(a.dataFechamento||a.dataCriacao) > new Date(b.dataFechamento||b.dataCriacao) ? a : b
-      ) : null;
+      const dados = mapaOS[c.id] || { total: 0, count: 0, ultima: null };
+      const totalGasto = dados.total + (c.totalGastoHistorico || 0);
+      const osCliente = dados.count;
+      const ultima = dados.ultima;
+      const cat = getCategoriaCli(c);
       linhasClientes.push([
         c.nome,
         c.wpp,
         c.end || '',
         c.criado ? new Date(c.criado).toLocaleDateString('pt-BR') : '',
-        osCliente.length,
+        osCliente,
         totalGasto.toFixed(2).replace('.', ','),
-        ultima ? new Date(ultima.dataFechamento||ultima.dataCriacao).toLocaleDateString('pt-BR') : ''
+        ultima ? ultima.toLocaleDateString('pt-BR') : '',
+        getCatLabel(cat)
       ]);
     });
 
@@ -3159,8 +3107,7 @@ function processarImport(input) {
           () => {
             // Mesclar: adicionar apenas os novos
             clientes = [...clientes, ...novos];
-            salvarLocal();
-            if (window.fbSalvar) window.fbSalvar();
+            salvarLocal(true);
             updStats(); rendClientes(); rendHome();
             atualizarStatusBackup();
             toast(`✅ ${novos.length} clientes adicionados! (${duplicatas} já existiam)`);
@@ -3189,7 +3136,7 @@ function processarImport(input) {
           mesAtual     = dados.mesAtual || getMesKey();
           osCounter    = dados.osCounter || 0;
           if (dados.meta) window._sc.meta = dados.meta;
-          salvarLocal();
+          salvarLocal(true);
           if (window.fbSalvar) window.fbSalvar();
           updStats(); rendHist(); rendClientes(); rendFaturamento();
           rendTipos(); rendPrecosTabela(); rendAgenda(); rendHome();
@@ -3231,6 +3178,14 @@ function verificarBackupAutomatico() {
 }
 
 function atualizarStatusBackup() {
+  // Gerenciar card de migração
+  const cardMig = document.getElementById('card-migracao');
+  const qtdEl = document.getElementById('migracao-qtd');
+  if (cardMig) {
+    const migrado = localStorage.getItem('sc_clientes_migrados');
+    cardMig.style.display = migrado ? 'none' : 'block';
+    if (qtdEl) qtdEl.textContent = clientes.length;
+  }
   const el = document.getElementById('backup-ultimo-label');
   const elProx = document.getElementById('backup-proximo-label');
   const elBadge = document.getElementById('backup-status-badge');
@@ -3268,7 +3223,6 @@ function atualizarStatusBackup() {
     if (elProg) elProg.style.background = 'linear-gradient(90deg,var(--blue),var(--sky))';
   }
 }
-
 
 init();
 </script>
