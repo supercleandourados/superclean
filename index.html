@@ -2503,12 +2503,8 @@ function calcReativacao(mostrarAlerta){
       mapa[o.cliId]={data:df,cliNome:o.cliNome,cliWpp:o.cliWpp,osNum:o.numero,cliId:o.cliId};
   });
 
-  // 2. Clientes importados com histórico real mas sem OS no sistema
-  clientes.forEach(c=>{
-    if(c.totalGastoHistorico>0&&!mapa[c.id]){
-      mapa[c.id]={data:new Date(c.criado||0),cliNome:c.nome,cliWpp:c.wpp,osNum:0,cliId:c.id,importado:true};
-    }
-  });
+  // Clientes importados da plataforma anterior NÃO entram na reativação por enquanto.
+  // Serão incluídos automaticamente conforme forem atendidos pelo sistema novo.
 
   const reat=Object.values(mapa).filter(m=>agora-m.data>=seisM).sort((a,b)=>a.data-b.data);
   const qtd=reat.length;
