@@ -178,6 +178,13 @@ select option{background:#0a1e38;}
 /* CLIENTES */
 .cli-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .2s;}
 .cli-item:hover{border-color:rgba(42,171,238,.3);}
+.cat-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.5px;text-transform:uppercase;}
+.cat-vip{background:rgba(255,200,0,.15);color:#ffc800;border:1px solid rgba(255,200,0,.3);}
+.cat-frequente{background:rgba(180,180,180,.12);color:#bbb;border:1px solid rgba(180,180,180,.25);}
+.cat-ativo{background:rgba(180,100,50,.15);color:#cd7f32;border:1px solid rgba(180,100,50,.3);}
+.cat-novo{background:rgba(42,171,238,.12);color:var(--sky);border:1px solid rgba(42,171,238,.25);}
+.cli-pag-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);font-size:13px;cursor:pointer;}
+.cli-pag-btn:disabled{opacity:.3;cursor:default;}
 /* REATIVAÇÃO */
 .reat-item{background:rgba(255,140,0,.08);border:1px solid rgba(255,140,0,.25);border-radius:9px;padding:12px 14px;margin-bottom:8px;}
 .reat-vencido{background:rgba(229,57,53,.08);border-color:rgba(229,57,53,.25);}
@@ -652,9 +659,36 @@ select option{background:#0a1e38;}
     </div>
     <!-- Lista clientes -->
     <div class="card">
-      <div class="ctitle">👥 Clientes Cadastrados</div>
-      <input type="text" id="cli-busca" placeholder="🔍 Buscar por nome ou telefone..." oninput="debounceRendCli()" style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div class="ctitle" style="margin-bottom:0;">👥 Clientes</div>
+        <div style="font-size:11px;color:var(--muted);" id="cli-contador">— clientes</div>
+      </div>
+      <!-- Busca -->
+      <input type="text" id="cli-busca" placeholder="🔍 Buscar por nome ou telefone..." oninput="debounceRendCli()" style="margin-bottom:10px;">
+      <!-- Filtros categoria -->
+      <div class="filtro-status" style="margin-bottom:10px;" id="cli-filtros">
+        <button class="filtro-btn ativo" onclick="setFiltroCliCat('todos',this)">Todos</button>
+        <button class="filtro-btn" onclick="setFiltroCliCat('vip',this)">🥇 VIP</button>
+        <button class="filtro-btn" onclick="setFiltroCliCat('frequente',this)">🥈 Frequentes</button>
+        <button class="filtro-btn" onclick="setFiltroCliCat('ativo',this)">🥉 Ativos</button>
+        <button class="filtro-btn" onclick="setFiltroCliCat('novo',this)">🆕 Novos</button>
+      </div>
+      <!-- Ordenação -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+        <span style="font-size:11px;color:var(--muted);white-space:nowrap;">Ordenar:</span>
+        <select id="cli-ordem" onchange="rendClientes()" style="flex:1;font-size:12px;padding:6px 8px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;">
+          <option value="nome">A → Z</option>
+          <option value="gasto">Maior gasto</option>
+          <option value="recente">Mais recente</option>
+        </select>
+      </div>
       <div id="lista-clientes"></div>
+      <!-- Paginação -->
+      <div id="cli-paginacao" style="display:none;align-items:center;justify-content:space-between;margin-top:14px;gap:8px;">
+        <button class="btn btn-o" id="cli-pag-prev" onclick="navCliPag(-1)" style="padding:8px 16px;font-size:13px;">‹ Anterior</button>
+        <span id="cli-pag-info" style="font-size:12px;color:var(--muted);text-align:center;"></span>
+        <button class="btn btn-o" id="cli-pag-next" onclick="navCliPag(1)" style="padding:8px 16px;font-size:13px;">Próximo ›</button>
+      </div>
     </div>
   </div>
 
@@ -1259,33 +1293,158 @@ function limparCliente(){
   document.getElementById('cli-input').value='';
   document.getElementById('cli-selecionado').style.display='none';
 }
-function rendClientes(){
-  const q=(document.getElementById('cli-busca')||{value:''}).value.toLowerCase();
-  const lista=document.getElementById('lista-clientes');
-  let arr=clientes;
-  if(q)arr=arr.filter(c=>c.nome.toLowerCase().includes(q)||c.wpp.includes(q));
-  if(!arr.length){lista.innerHTML='<div class="empty">Nenhum cliente encontrado</div>';return;}
-  lista.innerHTML=arr.map(c=>`<div class="cli-item" onclick="verCliente(${c.id})">
-    <div>
-      <div style="font-size:14px;font-weight:600;color:#fff;">${c.nome}</div>
-      <div style="font-size:11px;color:var(--muted);">📱 ${c.wpp}${c.end?' · 📍 '+c.end:''}</div>
-    </div><div style="font-size:12px;color:var(--sky);">Ver ›</div></div>`).join('');
+// ============ CLIENTES — PAGINAÇÃO + CATEGORIAS ============
+let _cliPagina = 0;
+let _cliCatFiltro = 'todos';
+const CLI_POR_PAG = 30;
+
+function getCategoriaCli(c) {
+  // Prioridade: categoria importada > calculada pelo histórico de OS
+  if (c.categoria) return c.categoria;
+  const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
+  const osC = todasOS.filter(o => o.cliId === c.id && o.status === 'aprovado');
+  const total = osC.reduce((a, o) => a + parseFloat(o.total || 0), 0);
+  if (osC.length === 0) return 'novo';
+  if (total >= 1000) return 'vip';
+  if (total >= 500) return 'frequente';
+  return 'ativo';
+}
+
+function getCatLabel(cat) {
+  return {vip:'🥇 VIP', frequente:'🥈 Frequente', ativo:'🥉 Ativo', novo:'🆕 Novo'}[cat] || '';
+}
+function getCatClass(cat) {
+  return {vip:'cat-vip', frequente:'cat-frequente', ativo:'cat-ativo', novo:'cat-novo'}[cat] || 'cat-novo';
+}
+
+function setFiltroCliCat(cat, btn) {
+  _cliCatFiltro = cat;
+  _cliPagina = 0;
+  document.querySelectorAll('#cli-filtros .filtro-btn').forEach(b => {
+    b.classList.remove('ativo','ativo-aprovado','ativo-pendente');
+  });
+  if (btn) btn.classList.add('ativo');
+  rendClientes();
+}
+
+function navCliPag(dir) {
+  _cliPagina += dir;
+  rendClientes();
+  document.getElementById('tab-clientes').scrollTop = 0;
+  document.querySelector('#tab-clientes .card:last-child').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function rendClientes() {
+  const q = (document.getElementById('cli-busca') || {value:''}).value.toLowerCase().trim();
+  const ordem = (document.getElementById('cli-ordem') || {value:'nome'}).value;
+  const lista = document.getElementById('lista-clientes');
+  if (!lista) return;
+
+  // Filtrar
+  let arr = clientes.map(c => ({...c, _cat: getCategoriaCli(c)}));
+
+  if (q) {
+    arr = arr.filter(c =>
+      c.nome.toLowerCase().includes(q) ||
+      (c.wpp || '').includes(q) ||
+      (c.end || '').toLowerCase().includes(q)
+    );
+    _cliPagina = 0; // reset página na busca
+  }
+
+  if (_cliCatFiltro !== 'todos') {
+    arr = arr.filter(c => c._cat === _cliCatFiltro);
+  }
+
+  // Ordenar
+  if (ordem === 'nome') {
+    arr.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  } else if (ordem === 'gasto') {
+    const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
+    arr.sort((a, b) => {
+      const ga = todasOS.filter(o=>o.cliId===a.id&&o.status==='aprovado').reduce((s,o)=>s+parseFloat(o.total||0),0) + (a.totalGastoHistorico||0);
+      const gb = todasOS.filter(o=>o.cliId===b.id&&o.status==='aprovado').reduce((s,o)=>s+parseFloat(o.total||0),0) + (b.totalGastoHistorico||0);
+      return gb - ga;
+    });
+  } else if (ordem === 'recente') {
+    arr.sort((a, b) => new Date(b.criado||0) - new Date(a.criado||0));
+  }
+
+  // Contador
+  const contEl = document.getElementById('cli-contador');
+  if (contEl) {
+    const labels = {todos:'', vip:'🥇 VIP', frequente:'🥈 Frequentes', ativo:'🥉 Ativos', novo:'🆕 Novos'};
+    contEl.textContent = `${arr.length} ${labels[_cliCatFiltro]||''}`.trim();
+  }
+
+  if (!arr.length) {
+    lista.innerHTML = '<div class="empty">Nenhum cliente encontrado</div>';
+    const pagEl = document.getElementById('cli-paginacao');
+    if (pagEl) pagEl.style.display = 'none';
+    return;
+  }
+
+  // Paginação
+  const totalPag = Math.ceil(arr.length / CLI_POR_PAG);
+  if (_cliPagina >= totalPag) _cliPagina = totalPag - 1;
+  if (_cliPagina < 0) _cliPagina = 0;
+
+  const inicio = _cliPagina * CLI_POR_PAG;
+  const pagina = arr.slice(inicio, inicio + CLI_POR_PAG);
+
+  // Renderizar
+  lista.innerHTML = pagina.map(c => {
+    const catClass = getCatClass(c._cat);
+    const catLabel = getCatLabel(c._cat);
+    return `<div class="cli-item" onclick="verCliente(${c.id})">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">
+          <span style="font-size:14px;font-weight:600;color:#fff;">${c.nome}</span>
+          <span class="cat-badge ${catClass}">${catLabel}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          📱 ${c.wpp}${c.end ? ' · 📍 ' + c.end : ''}
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--sky);flex-shrink:0;margin-left:8px;">Ver ›</div>
+    </div>`;
+  }).join('');
+
+  // Mostrar/ocultar paginação
+  const pagEl = document.getElementById('cli-paginacao');
+  if (pagEl) {
+    pagEl.style.display = totalPag > 1 ? 'flex' : 'none';
+    const infoEl = document.getElementById('cli-pag-info');
+    if (infoEl) infoEl.textContent = `Pág. ${_cliPagina + 1} de ${totalPag}`;
+    const btnPrev = document.getElementById('cli-pag-prev');
+    const btnNext = document.getElementById('cli-pag-next');
+    if (btnPrev) btnPrev.disabled = _cliPagina === 0;
+    if (btnNext) btnNext.disabled = _cliPagina >= totalPag - 1;
+  }
 }
 function verCliente(id){
   const c=clientes.find(x=>x.id===id);if(!c)return;
   const os=[...ordens,...historico.flatMap(m=>m.ordens||[])].filter(o=>o.cliId===id);
   const fc=os.filter(o=>o.status==='aprovado');
-  const totalGasto=fc.reduce((a,o)=>a+parseFloat(o.total||0),0);
-  const ticketMedio=fc.length?totalGasto/fc.length:0;
+  const totalGastoOS=fc.reduce((a,o)=>a+parseFloat(o.total||0),0);
+  const totalGasto=totalGastoOS+(c.totalGastoHistorico||0);
+  const ticketMedio=fc.length?totalGastoOS/fc.length:0;
   const ultimaOS=fc.length?fc.reduce((a,b)=>new Date(a.dataFechamento||a.dataCriacao)>new Date(b.dataFechamento||b.dataCriacao)?a:b):null;
+  const cat=getCategoriaCli(c);
+  const catLabel=getCatLabel(cat);
+  const catClass=getCatClass(cat);
   const body=document.getElementById('modal-cli-body');
   body.innerHTML=`
   <div style="margin-bottom:16px;">
-    <div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px;">${c.nome}</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+      <div style="font-size:18px;font-weight:700;color:#fff;">${c.nome}</div>
+      <span class="cat-badge ${catClass}" style="font-size:11px;padding:3px 9px;">${catLabel}</span>
+    </div>
     <div style="font-size:13px;color:var(--muted);line-height:1.8;">
       📱 <a href="https://wa.me/55${(c.wpp||'').replace(/\D/g,'')}" target="_blank" style="color:var(--sky);text-decoration:none;">${c.wpp}</a>
       ${c.end?'<br>📍 '+c.end:''}
       ${c.criado?'<br>📅 Cliente desde '+new Date(c.criado).toLocaleDateString('pt-BR'):''}
+      ${c.totalGastoHistorico?'<br>📦 Histórico importado: '+fmtMoeda(c.totalGastoHistorico):''}
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
@@ -1311,7 +1470,7 @@ function verCliente(id){
     <div style="font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.itens?o.itens.map(i=>i.tipo).join(', '):''}</div>
   </div>`).join(''):'<div class="empty" style="padding:16px 0;">Nenhuma OS ainda</div>'}
   <div class="brow" style="margin-top:12px;">
-    <button class="btn btn-wpp" onclick="window.open('https://wa.me/55${(c.wpp||'').replace(/\D/g,'')}','_blank')" style="flex:1;">📱 WhatsApp</button>
+    <button class="btn btn-wpp" onclick="window.open('https://wa.me/55${(c.wpp||'').replace(/\D/g,'')}\','_blank')" style="flex:1;">📱 WhatsApp</button>
     <button class="btn btn-g" onclick="novaOsCliente(${c.id})" style="flex:1;">📋 Nova OS</button>
   </div>`;
   document.getElementById('btn-excluir-cli').onclick=()=>excluirCliente(id);
@@ -2970,15 +3129,52 @@ function processarImport(input) {
   reader.onload = (e) => {
     try {
       const dados = JSON.parse(e.target.result);
-      // Validar que é um backup válido
-      if (!dados.clientes || !dados.ordens || !dados.versao) {
+      if (!dados.clientes || !dados.versao) {
         toast('❌ Arquivo inválido. Use um backup gerado pelo sistema.', true);
         return;
       }
+
+      // Detectar se é importação parcial (só clientes, sem OS/agenda)
+      const eSoClientes = (!dados.ordens || dados.ordens.length === 0) &&
+                          (!dados.historico || dados.historico.length === 0) &&
+                          (!dados.agendamentos || dados.agendamentos.length === 0);
+
+      const temClientesExistentes = clientes.length > 0;
+
+      // Se for só clientes E já tem clientes no sistema → oferecer mesclar
+      if (eSoClientes && temClientesExistentes) {
+        // Calcular duplicatas por WhatsApp
+        const wppExistentes = new Set(clientes.map(c => (c.wpp||'').replace(/\D/g,'')));
+        const novos = dados.clientes.filter(c => !wppExistentes.has((c.wpp||'').replace(/\D/g,'')));
+        const duplicatas = dados.clientes.length - novos.length;
+
+        confirmar(
+          '📂 Importar Clientes',
+          `Arquivo contém ${dados.clientes.length} clientes.\n\n` +
+          `✅ Novos para adicionar: ${novos.length}\n` +
+          `⚠️ Já existem no sistema: ${duplicatas} (serão ignorados)\n\n` +
+          `Os ${clientes.length} clientes atuais serão mantidos.`,
+          `➕ Mesclar ${novos.length} clientes`,
+          'btn-g',
+          () => {
+            // Mesclar: adicionar apenas os novos
+            clientes = [...clientes, ...novos];
+            salvarLocal();
+            if (window.fbSalvar) window.fbSalvar();
+            updStats(); rendClientes(); rendHome();
+            atualizarStatusBackup();
+            toast(`✅ ${novos.length} clientes adicionados! (${duplicatas} já existiam)`);
+          }
+        );
+        input.value = '';
+        return;
+      }
+
+      // Backup completo → restaurar tudo (comportamento original)
       confirmar(
-        '📂 Restaurar Backup',
+        '📂 Restaurar Backup Completo',
         `Restaurar backup de ${new Date(dados.exportadoEm).toLocaleString('pt-BR')}?\n\n` +
-        `Contém: ${dados.clientes.length} clientes, ${dados.ordens.length} OS no mês, ` +
+        `Contém: ${dados.clientes.length} clientes, ${(dados.ordens||[]).length} OS, ` +
         `${(dados.historico||[]).reduce((a,m)=>a+(m.ordens||[]).length,0)} no histórico.\n\n` +
         `⚠️ Os dados atuais serão substituídos.`,
         '✅ Restaurar',
