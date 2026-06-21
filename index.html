@@ -2490,25 +2490,43 @@ function buildReatCard(r,agora){
 function calcReativacao(mostrarAlerta){
   const el=document.getElementById('lista-reat');
   const agora=new Date();const seisM=183*24*60*60*1000;
-  const todas=[...ordens,...historico.flatMap(m=>m.ordens||[])].filter(o=>o.status==='aprovado');
+
+  // Montar mapa em UMA passagem (OS + clientes importados juntos)
   const mapa={};
-  todas.forEach(o=>{
+
+  // 1. OS aprovadas no sistema
+  const todasOS=[...ordens,...historico.flatMap(m=>m.ordens||[])];
+  todasOS.forEach(o=>{
+    if(o.status!=='aprovado')return;
     const df=new Date(o.dataFechamento||o.dataCriacao);
     if(!mapa[o.cliId]||df>mapa[o.cliId].data)
       mapa[o.cliId]={data:df,cliNome:o.cliNome,cliWpp:o.cliWpp,osNum:o.numero,cliId:o.cliId};
   });
+
+  // 2. Clientes importados com histórico real mas sem OS no sistema
+  clientes.forEach(c=>{
+    if(c.totalGastoHistorico>0&&!mapa[c.id]){
+      mapa[c.id]={data:new Date(c.criado||0),cliNome:c.nome,cliWpp:c.wpp,osNum:0,cliId:c.id,importado:true};
+    }
+  });
+
   const reat=Object.values(mapa).filter(m=>agora-m.data>=seisM).sort((a,b)=>a.data-b.data);
   const qtd=reat.length;
+
+  // Atualizar cache de stats (evita updStats recalcular)
+  _statsReatCache=qtd;
+  _statsReatKey=ordens.length+'|'+historico.length;
+
   document.getElementById('sreat').textContent=qtd;
+  const hcReat=document.getElementById('hc-reat');
+  if(hcReat)hcReat.textContent=qtd;
+
   const tabBtn=document.getElementById('tab-btn-reat');
   if(tabBtn){
     const badgeExist=tabBtn.querySelector('.tab-badge');
     if(qtd>0){
-      if(!badgeExist){
-        const badge=document.createElement('span');
-        badge.className='tab-badge';badge.id='reat-tab-badge';badge.textContent=qtd;
-        tabBtn.appendChild(badge);
-      } else {badgeExist.textContent=qtd;}
+      if(!badgeExist){const badge=document.createElement('span');badge.className='tab-badge';badge.id='reat-tab-badge';badge.textContent=qtd;tabBtn.appendChild(badge);}
+      else{badgeExist.textContent=qtd;}
     } else {if(badgeExist)badgeExist.remove();}
   }
   if(el){
