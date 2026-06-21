@@ -830,10 +830,7 @@ select option{background:#0a1e38;}
 <div class="modal-overlay" id="modal-virar">
   <div class="modal">
     <div class="modal-title">🔄 Virar Mês</div>
-    <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:20px;">
-      As ordens do mês atual serão <strong style="color:#fff">arquivadas no histórico</strong> e o sistema começará um novo mês zerado.<br><br>
-      Os <strong style="color:#fff">clientes, cadastros e agendamentos futuros</strong> são mantidos.
-    </p>
+    <div id="modal-virar-resumo" style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:20px;"></div>
     <div class="brow">
       <button class="btn btn-o" onclick="fecharModal('modal-virar')" style="flex:1;">Cancelar</button>
       <button class="btn btn-orange" onclick="virarMes()" style="flex:1;">✅ Confirmar</button>
@@ -1237,6 +1234,7 @@ function init(){
     rendHist();
     setTimeout(()=>calcReativacao(true), 800);
     setTimeout(()=>verificarBackupAutomatico(), 2000);
+    setTimeout(()=>verificarMesNovo(), 3000);
     const syncEl = document.getElementById('fb-sync-status');
     if (syncEl) syncEl.style.display = 'flex';
   }
@@ -2416,18 +2414,55 @@ function rendHistoricoCompleto(){
     </div>`;
   }).join('');
 }
-function confirmarVirarMes(){abrirModal('modal-virar');}
+function confirmarVirarMes(){
+  const pendentes   = ordens.filter(o => o.status === 'pendente');
+  const aprovadas   = ordens.filter(o => o.status === 'aprovado');
+  const recusadas   = ordens.filter(o => o.status === 'recusado' || o.status === 'cancelado');
+  const [ano, mes]  = mesAtual.split('-');
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const nomeMes = meses[parseInt(mes)-1]+'/'+ano;
+
+  const el = document.getElementById('modal-virar-resumo');
+  if (el) {
+    el.innerHTML = `
+      <strong style="color:#fff;">Resumo de ${nomeMes}:</strong><br><br>
+      🟢 ${aprovadas.length} OS aprovada${aprovadas.length!==1?'s':''} — serão <strong style="color:#fff">arquivadas</strong><br>
+      🔴 ${recusadas.length} OS recusada/cancelada${recusadas.length!==1?'s':''} — serão <strong style="color:#fff">arquivadas</strong><br>
+      ${pendentes.length > 0
+        ? `🟡 ${pendentes.length} OS pendente${pendentes.length!==1?'s':''} — <strong style="color:#ffc800">permanecem abertas</strong> no novo mês<br>`
+        : ''}
+      <br>Clientes, agendamentos e configurações são mantidos.`;
+  }
+  abrirModal('modal-virar');
+}
 function virarMes(){
-  const arquivo={mesKey:mesAtual,ordens:[...ordens],arquivadoEm:new Date().toISOString()};
-  historico.push(arquivo);
-  ordens=[];
-  const [ano,mes]=mesAtual.split('-').map(Number);
-  let nm=mes+1,na=ano;if(nm>12){nm=1;na++;}
-  mesAtual=na+'-'+String(nm).padStart(2,'0');
-  salvarLocal();fecharModal('modal-virar');
-  document.getElementById('hmes').textContent=getMesLabel(mesAtual);
-  rendHist();rendHistoricoCompleto();updStats();rendFaturamento();
-  toast('✅ Mês virado! Agora: '+getMesLabel(mesAtual));
+  // Separar: pendentes ficam no mês atual, fechadas/recusadas/canceladas vão pro histórico
+  const paraArquivar = ordens.filter(o => o.status !== 'pendente');
+  const pendentes    = ordens.filter(o => o.status === 'pendente');
+
+  // Só arquiva se tiver algo para arquivar
+  if (paraArquivar.length > 0) {
+    const arquivo = { mesKey: mesAtual, ordens: paraArquivar, arquivadoEm: new Date().toISOString() };
+    historico.push(arquivo);
+  }
+
+  // Avançar o mês
+  const [ano, mes] = mesAtual.split('-').map(Number);
+  let nm = mes + 1, na = ano;
+  if (nm > 12) { nm = 1; na++; }
+  mesAtual = na + '-' + String(nm).padStart(2, '0');
+
+  // Manter pendentes no novo mês (com o novo mesAtual)
+  ordens = pendentes.map(o => ({ ...o, mes: mesAtual }));
+
+  salvarLocal(); fecharModal('modal-virar');
+  document.getElementById('hmes').textContent = getMesLabel(mesAtual);
+  rendHist(); rendHistoricoCompleto(); updStats(); rendFaturamento();
+
+  const txtPend = pendentes.length > 0
+    ? ` (${pendentes.length} OS pendente${pendentes.length > 1 ? 's' : ''} mantida${pendentes.length > 1 ? 's' : ''})`
+    : '';
+  toast('✅ Mês virado! Agora: ' + getMesLabel(mesAtual) + txtPend);
 }
 function buildReatCard(r,agora){
   const d=Math.floor((agora-r.data)/(24*60*60*1000));
@@ -3335,6 +3370,50 @@ function processarImport(input) {
 }
 
 // ---- BACKUP AUTOMÁTICO SEMANAL ----
+function verificarMesNovo() {
+  const mesHoje = getMesKey(); // YYYY-MM do dia de hoje
+  // Se o mês do sistema é diferente do mês atual = virada de mês
+  if (!mesAtual || mesAtual === mesHoje) return;
+
+  // Verificar se já avisou hoje (evitar repetir a cada reload)
+  const jaAvisouHoje = localStorage.getItem('sc_aviso_mes') === mesHoje;
+  if (jaAvisouHoje) return;
+
+  // Contar OS pendentes do mês anterior para informar
+  const osPendentes = ordens.filter(o => o.status === 'pendente').length;
+  const osTotal = ordens.length;
+  const [ano, mes] = mesAtual.split('-');
+  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const nomeMesAnt = meses[parseInt(mes)-1] + '/' + ano;
+  const nomeMesNovo = meses[parseInt(mesHoje.split('-')[1])-1] + '/' + mesHoje.split('-')[0];
+
+  let msg = `Você está em ${nomeMesNovo}, mas o sistema ainda está em ${nomeMesAnt}.`;
+  if (osTotal > 0) {
+    msg += `\n\n📋 ${nomeMesAnt} tem ${osTotal} OS:`;
+    const aprov = ordens.filter(o=>o.status==='aprovado').length;
+    const recus = ordens.filter(o=>o.status==='recusado'||o.status==='cancelado').length;
+    if (aprov)   msg += `\n  🟢 ${aprov} aprovada${aprov!==1?'s':''} (serão arquivadas)`;
+    if (recus)   msg += `\n  🔴 ${recus} recusada/cancelada${recus!==1?'s':''} (serão arquivadas)`;
+    if (osPendentes) msg += `\n  🟡 ${osPendentes} pendente${osPendentes!==1?'s':''} (permanecem abertas)`;
+  }
+  msg += '\n\nDeseja virar o mês agora?';
+
+  confirmar(
+    `📅 Novo Mês — ${nomeMesNovo}`,
+    msg,
+    '🔄 Virar Mês Agora',
+    'btn-g',
+    () => {
+      virarMes();
+      localStorage.setItem('sc_aviso_mes', mesHoje);
+    }
+  );
+
+  // Registrar que já avisou hoje independente da escolha
+  // (se o usuário cancelar, não pergunta de novo até amanhã)
+  localStorage.setItem('sc_aviso_mes', mesHoje);
+}
+
 function verificarBackupAutomatico() {
   const ultimo = localStorage.getItem(BACKUP_KEY);
   if (!ultimo) {
