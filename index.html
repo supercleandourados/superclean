@@ -185,6 +185,17 @@ select option{background:#0a1e38;}
 .cat-novo{background:rgba(42,171,238,.12);color:var(--sky);border:1px solid rgba(42,171,238,.25);}
 .cli-pag-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--muted);font-size:13px;cursor:pointer;}
 .cli-pag-btn:disabled{opacity:.3;cursor:default;}
+.rank-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.rank-item:last-child{border-bottom:none;}
+.rank-pos{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+.rank-pos-1{background:rgba(255,200,0,.2);color:#ffc800;}
+.rank-pos-2{background:rgba(180,180,180,.15);color:#bbb;}
+.rank-pos-3{background:rgba(180,100,50,.2);color:#cd7f32;}
+.rank-pos-n{background:rgba(255,255,255,.06);color:var(--muted);}
+.rank-nome{flex:1;font-size:13px;color:#fff;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rank-info{font-size:11px;color:var(--muted);text-align:right;flex-shrink:0;}
+.rank-val{font-size:14px;font-weight:700;color:var(--green);text-align:right;flex-shrink:0;}
+.sub-btn-ativo{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important;}
 /* REATIVAÇÃO */
 .reat-item{background:rgba(255,140,0,.08);border:1px solid rgba(255,140,0,.25);border-radius:9px;padding:12px 14px;margin-bottom:8px;}
 .reat-vencido{background:rgba(229,57,53,.08);border-color:rgba(229,57,53,.25);}
@@ -633,57 +644,78 @@ select option{background:#0a1e38;}
       <div id="fat-lista-mes"></div>
     </div>
   </div>
-  <div id="tab-clientes" class="tbc">
-    <!-- Formulário cadastro -->
-    <div class="card" style="margin-bottom:16px;">
-      <div class="ctitle">👤 Cadastrar Novo Cliente</div>
-      <div class="field">
-        <label>Nome *</label>
-        <input type="text" id="nc2-nome" placeholder="Nome completo">
-      </div>
-      <div class="field">
-        <label>WhatsApp *</label>
-        <input type="text" id="nc2-wpp" placeholder="(67) 99999-9999" oninput="fmtFone2(this)">
-      </div>
-      <div class="field">
-        <label>Bairro / Endereço</label>
-        <input type="text" id="nc2-end" placeholder="Bairro ou rua">
-      </div>
-      <button class="btn btn-g" style="width:100%" onclick="salvarCliente2()">✅ Cadastrar Cliente</button>
+   <div id="tab-clientes" class="tbc">
+    <!-- Sub-abas -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button id="sub-btn-lista" class="btn btn-g" onclick="subTabCli('lista')" style="flex:1;font-size:12px;padding:10px 6px;">👥 Clientes</button>
+      <button id="sub-btn-ranking" class="btn btn-o" onclick="subTabCli('ranking')" style="flex:1;font-size:12px;padding:10px 6px;">🏆 Ranking</button>
+      <button id="sub-btn-novo" class="btn btn-o" onclick="subTabCli('novo')" style="flex:1;font-size:12px;padding:10px 6px;">➕ Novo</button>
     </div>
-    <!-- Lista clientes -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-        <div class="ctitle" style="margin-bottom:0;">👥 Clientes</div>
-        <div style="font-size:11px;color:var(--muted);" id="cli-contador">— clientes</div>
-      </div>
-      <!-- Busca -->
-      <input type="text" id="cli-busca" placeholder="🔍 Buscar por nome ou telefone..." oninput="debounceRendCli()" style="margin-bottom:10px;">
-      <!-- Filtros categoria -->
-      <div class="filtro-status" style="margin-bottom:10px;" id="cli-filtros">
-        <button class="filtro-btn ativo" onclick="setFiltroCliCat('todos',this)">Todos</button>
-        <button class="filtro-btn" onclick="setFiltroCliCat('vip',this)">🥇 VIP</button>
-        <button class="filtro-btn" onclick="setFiltroCliCat('frequente',this)">🥈 Frequentes</button>
-        <button class="filtro-btn" onclick="setFiltroCliCat('ativo',this)">🥉 Ativos</button>
-        <button class="filtro-btn" onclick="setFiltroCliCat('novo',this)">🆕 Novos</button>
-      </div>
-      <!-- Ordenação -->
-      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
-        <span style="font-size:11px;color:var(--muted);white-space:nowrap;">Ordenar:</span>
-        <select id="cli-ordem" onchange="rendClientes()" style="flex:1;font-size:12px;padding:6px 8px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;">
-          <option value="nome">A → Z</option>
-          <option value="gasto">Maior gasto</option>
-          <option value="recente">Mais recente</option>
-        </select>
-      </div>
-      <div id="lista-clientes"></div>
-      <!-- Paginação -->
-      <div id="cli-paginacao" style="display:none;align-items:center;justify-content:space-between;margin-top:14px;gap:8px;">
-        <button class="btn btn-o" id="cli-pag-prev" onclick="navCliPag(-1)" style="padding:8px 16px;font-size:13px;">‹ Anterior</button>
-        <span id="cli-pag-info" style="font-size:12px;color:var(--muted);text-align:center;"></span>
-        <button class="btn btn-o" id="cli-pag-next" onclick="navCliPag(1)" style="padding:8px 16px;font-size:13px;">Próximo ›</button>
+
+    <!-- SUB-ABA: NOVO CLIENTE -->
+    <div id="sub-cli-novo" style="display:none;">
+      <div class="card">
+        <div class="ctitle">👤 Cadastrar Novo Cliente</div>
+        <div class="field"><label>Nome *</label><input type="text" id="nc2-nome" placeholder="Nome completo"></div>
+        <div class="field"><label>WhatsApp *</label><input type="text" id="nc2-wpp" placeholder="(67) 99999-9999" oninput="fmtFone2(this)"></div>
+        <div class="field"><label>Bairro / Endereço</label><input type="text" id="nc2-end" placeholder="Bairro ou rua"></div>
+        <button class="btn btn-g" style="width:100%" onclick="salvarCliente2()">✅ Cadastrar Cliente</button>
       </div>
     </div>
+
+    <!-- SUB-ABA: LISTA -->
+    <div id="sub-cli-lista">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+          <div class="ctitle" style="margin-bottom:0;">👥 Clientes</div>
+          <div style="font-size:11px;color:var(--muted);" id="cli-contador">— clientes</div>
+        </div>
+        <input type="text" id="cli-busca" placeholder="🔍 Buscar por nome ou telefone..." oninput="debounceRendCli()" style="margin-bottom:10px;">
+        <div class="filtro-status" style="margin-bottom:10px;" id="cli-filtros">
+          <button class="filtro-btn ativo" onclick="setFiltroCliCat('todos',this)">Todos</button>
+          <button class="filtro-btn" onclick="setFiltroCliCat('vip',this)">🥇 VIP</button>
+          <button class="filtro-btn" onclick="setFiltroCliCat('frequente',this)">🥈 Frequentes</button>
+          <button class="filtro-btn" onclick="setFiltroCliCat('ativo',this)">🥉 Ativos</button>
+          <button class="filtro-btn" onclick="setFiltroCliCat('novo',this)">🆕 Novos</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap;">Ordenar:</span>
+          <select id="cli-ordem" onchange="rendClientes()" style="flex:1;font-size:12px;padding:6px 8px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:#fff;">
+            <option value="nome">A → Z</option>
+            <option value="gasto">Maior gasto</option>
+            <option value="recente">Mais recente</option>
+          </select>
+        </div>
+        <div id="lista-clientes"></div>
+        <div id="cli-paginacao" style="display:none;align-items:center;justify-content:space-between;margin-top:14px;gap:8px;">
+          <button class="btn btn-o" id="cli-pag-prev" onclick="navCliPag(-1)" style="padding:8px 16px;font-size:13px;">‹ Anterior</button>
+          <span id="cli-pag-info" style="font-size:12px;color:var(--muted);text-align:center;"></span>
+          <button class="btn btn-o" id="cli-pag-next" onclick="navCliPag(1)" style="padding:8px 16px;font-size:13px;">Próximo ›</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUB-ABA: RANKING -->
+    <div id="sub-cli-ranking" style="display:none;">
+      <div class="card" style="margin-bottom:12px;padding:12px 14px;">
+        <div class="filtro-status" style="margin:0;">
+          <button class="filtro-btn ativo" onclick="setRankPeriodo('total',this)">Todo período</button>
+          <button class="filtro-btn" onclick="setRankPeriodo('mes',this)">Este mês</button>
+          <button class="filtro-btn" onclick="setRankPeriodo('ano',this)">Este ano</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div class="scard"><div class="snum" id="rank-total-cli" style="font-size:18px;color:var(--sky);">—</div><div class="slabel">Clientes ativos</div></div>
+        <div class="scard"><div class="snum" id="rank-fat-total" style="font-size:14px;color:var(--green);">—</div><div class="slabel">Faturamento</div></div>
+        <div class="scard"><div class="snum" id="rank-ticket-med" style="font-size:14px;">—</div><div class="slabel">Ticket médio</div></div>
+        <div class="scard"><div class="snum" id="rank-conversao" style="font-size:18px;color:var(--orange);">—</div><div class="slabel">% Conversão</div></div>
+      </div>
+      <div class="card">
+        <div class="ctitle" id="rank-titulo">🏆 Top Clientes — Todo Período</div>
+        <div id="lista-ranking"></div>
+      </div>
+    </div>
+
   </div>
   <div id="tab-hist" class="tbc">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
@@ -1133,14 +1165,18 @@ window._sc = {
 // Função de re-render global para o Firebase listener
 window.showCloudToast = function(){ showCloudToast(); };
 window.scRender = function() {
-  invalidarCatCache(); // dados mudaram — limpar cache de categorias
+  invalidarCatCache();
   updStats();
   document.getElementById('hmes').textContent = getMesLabel(mesAtual);
-  // Re-renderizar apenas a aba ativa
   const t = window._tabAtual || 'home';
   if(t==='home')rendHome();
   else if(t==='hist')rendHist();
-  else if(t==='clientes')rendClientes();
+  else if(t==='clientes'){
+    // Só re-renderizar a sub-aba que está visível
+    const subRanking = document.getElementById('sub-cli-ranking');
+    if(subRanking && subRanking.style.display !== 'none') rendRankingClientes();
+    else rendClientes();
+  }
   else if(t==='reat')calcReativacao(false);
   else if(t==='historico')rendHistoricoCompleto();
   else if(t==='config'){rendTipos();rendPrecosTabela();atualizarStatusBackup();}
@@ -1171,15 +1207,22 @@ function hoje(){return new Date().toISOString().split('T')[0];}
 function init(){
   // Aguardar Firebase carregar dados antes de renderizar
   function _startApp() {
-    clientes     = JSON.parse(localStorage.getItem('sc_clientes')   ||'[]');
-    ordens       = JSON.parse(localStorage.getItem('sc_ordens')     ||'[]');
-    historico    = JSON.parse(localStorage.getItem('sc_historico')  ||'[]');
-    agendamentos = JSON.parse(localStorage.getItem('sc_agenda')     ||'[]');
-    tipos        = JSON.parse(localStorage.getItem('sc_tipos')      ||'null') || TIPOS_DEFAULT;
-    precos       = JSON.parse(localStorage.getItem('sc_precos')     ||'{}');
-    mesAtual     = localStorage.getItem('sc_mes_atual') || getMesKey();
-    osCounter    = parseInt(localStorage.getItem('sc_os_counter')   ||'0');
-    meta         = parseFloat(localStorage.getItem('sc_meta')       ||'0');
+    try {
+      clientes     = JSON.parse(localStorage.getItem('sc_clientes')   ||'[]');
+      ordens       = JSON.parse(localStorage.getItem('sc_ordens')     ||'[]');
+      historico    = JSON.parse(localStorage.getItem('sc_historico')  ||'[]');
+      agendamentos = JSON.parse(localStorage.getItem('sc_agenda')     ||'[]');
+      tipos        = JSON.parse(localStorage.getItem('sc_tipos')      ||'null') || TIPOS_DEFAULT;
+      precos       = JSON.parse(localStorage.getItem('sc_precos')     ||'{}');
+    } catch(e) {
+      // localStorage corrompido — iniciar com dados vazios (não trava o app)
+      console.warn('localStorage corrompido, iniciando zerado:', e);
+      clientes=[]; ordens=[]; historico=[]; agendamentos=[];
+      tipos=TIPOS_DEFAULT; precos={};
+    }
+    mesAtual  = localStorage.getItem('sc_mes_atual') || getMesKey();
+    osCounter = parseInt(localStorage.getItem('sc_os_counter') ||'0');
+    meta      = parseFloat(localStorage.getItem('sc_meta')     ||'0');
     mudarTab('home');
     document.getElementById('hmes').textContent=getMesLabel(mesAtual);
     const proxOS=osCounter+1;
@@ -1194,7 +1237,6 @@ function init(){
     rendHist();
     setTimeout(()=>calcReativacao(true), 800);
     setTimeout(()=>verificarBackupAutomatico(), 2000);
-    // Mostrar indicador de nuvem
     const syncEl = document.getElementById('fb-sync-status');
     if (syncEl) syncEl.style.display = 'flex';
   }
@@ -1281,6 +1323,146 @@ function limparCliente(){
   document.getElementById('cli-selecionado').style.display='none';
 }
 let _cliPagina = 0;
+let _rankPeriodo = 'total';
+
+// ============ SUB-ABAS CLIENTES ============
+function subTabCli(aba) {
+  ['lista','ranking','novo'].forEach(a => {
+    const el = document.getElementById('sub-cli-'+a);
+    const btn = document.getElementById('sub-btn-'+a);
+    if (el) el.style.display = a === aba ? (a==='lista'?'block':'block') : 'none';
+    if (btn) btn.classList.toggle('sub-btn-ativo', a === aba);
+  });
+  if (aba === 'ranking') rendRankingClientes();
+  if (aba === 'lista') rendClientes();
+}
+
+// ============ RANKING DE CLIENTES ============
+function setRankPeriodo(periodo, btn) {
+  _rankPeriodo = periodo;
+  document.querySelectorAll('#sub-cli-ranking .filtro-btn').forEach(b =>
+    b.classList.remove('ativo','ativo-aprovado','ativo-pendente')
+  );
+  if (btn) btn.classList.add('ativo');
+  rendRankingClientes();
+}
+
+function rendRankingClientes() {
+  const el = document.getElementById('lista-ranking');
+  const titulo = document.getElementById('rank-titulo');
+  if (!el) return;
+
+  const agora = new Date();
+  const anoAtual = agora.getFullYear();
+  const mesAtualKey = getMesKey();
+
+  // Montar OS aprovadas — UMA passagem pelo array
+  const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
+
+  let labelPeriodo = 'Todo Período';
+  const mapaGasto = {}, mapaCount = {}, mapaVisitas = {}, mapaNome = {};
+
+  todasOS.forEach(o => {
+    if (o.status !== 'aprovado') return;
+    // Filtro de período
+    if (_rankPeriodo === 'mes') {
+      const mesOS = o.mes || (o.dataCriacao ? o.dataCriacao.slice(0,7) : '');
+      if (mesOS !== mesAtualKey) return;
+      labelPeriodo = 'Este Mês';
+    } else if (_rankPeriodo === 'ano') {
+      const dataOS = o.dataFechamento || o.dataCriacao || '';
+      if (!dataOS.startsWith(String(anoAtual))) return;
+      labelPeriodo = 'Este Ano';
+    }
+    const id = o.cliId;
+    mapaGasto[id] = (mapaGasto[id] || 0) + parseFloat(o.total || 0);
+    // Contar itens individuais (peças higienizadas)
+    const qtdItens = o.itens ? o.itens.reduce((s, i) => s + (parseFloat(i.qtd) || 1), 0) : 1;
+    mapaCount[id] = (mapaCount[id] || 0) + qtdItens;
+    // Contar visitas (OS fechadas)
+    mapaVisitas[id] = (mapaVisitas[id] || 0) + 1;
+    if (!mapaNome[id]) mapaNome[id] = o.cliNome || '—';
+  });
+
+  // Histórico importado — só no período total, UMA passagem
+  if (_rankPeriodo === 'total') {
+    clientes.forEach(c => {
+      if (c.totalGastoHistorico > 0) {
+        mapaGasto[c.id] = (mapaGasto[c.id] || 0) + c.totalGastoHistorico;
+        if (!mapaNome[c.id]) mapaNome[c.id] = c.nome;
+      }
+    });
+  }
+
+  if (titulo) titulo.textContent = `🏆 Top Clientes — ${labelPeriodo}`;
+
+  // Montar mapa de clientes por ID (UMA vez, para lookup O(1))
+  const cliMapa = {};
+  clientes.forEach(c => { cliMapa[c.id] = c; });
+
+  // Ordenar
+  const ranking = Object.entries(mapaGasto)
+    .map(([id, total]) => ({
+      id: parseInt(id), total,
+      nome: mapaNome[id] || cliMapa[parseInt(id)]?.nome || '—',
+      pecas: mapaCount[id] || 0,
+      visitas: mapaVisitas[id] || 0
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  // Cards de resumo — cálculos simples, sem iterar de novo
+  const fatTotal = ranking.reduce((s, r) => s + r.total, 0);
+  const nAtivos = ranking.length;
+  const ticket = nAtivos ? fatTotal / nAtivos : 0;
+  const conv = clientes.length ? Math.round(nAtivos / clientes.length * 100) : 0;
+
+  const setStat = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  setStat('rank-total-cli', nAtivos);
+  setStat('rank-fat-total', fmtMoeda(fatTotal));
+  setStat('rank-ticket-med', fmtMoeda(ticket));
+  setStat('rank-conversao', conv + '%');
+
+  const top = ranking.slice(0, 50);
+  if (!top.length) {
+    el.innerHTML = '<div class="empty">Nenhum cliente com serviços neste período</div>';
+    return;
+  }
+
+  // Usar cache de categorias (_buildCatCache já foi chamado se válido)
+  const { mapaTotal: catTotal } = _buildCatCache();
+
+  const medalhas = ['rank-pos-1','rank-pos-2','rank-pos-3'];
+  const emojis = ['🥇','🥈','🥉'];
+
+  // Usar DocumentFragment para não causar reflow por item
+  const frag = document.createDocumentFragment();
+  top.forEach((r, i) => {
+    const c = cliMapa[r.id];
+    // Categoria via cache (sem chamar getCategoriaCli em loop)
+    const gastoCache = (catTotal[r.id] || 0) + (c?.totalGastoHistorico || 0);
+    const cat = gastoCache >= 1000 ? 'vip' : gastoCache >= 500 ? 'frequente' : gastoCache > 0 ? 'ativo' : 'novo';
+
+    const div = document.createElement('div');
+    div.className = 'rank-item';
+    div.style.cursor = 'pointer';
+    div.onclick = () => verCliente(r.id);
+    div.innerHTML = `
+      <div class="rank-pos ${i < 3 ? medalhas[i] : 'rank-pos-n'}">${i < 3 ? emojis[i] : (i+1)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span class="rank-nome">${r.nome}</span>
+          <span class="cat-badge ${getCatClass(cat)}">${getCatLabel(cat)}</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+          ${r.pecas} peça${r.pecas!==1?'s':''} · ${r.visitas} visita${r.visitas!==1?'s':''}
+        </div>
+      </div>
+      <div class="rank-val">${fmtMoeda(r.total)}</div>`;
+    frag.appendChild(div);
+  });
+  el.innerHTML = '';
+  el.appendChild(frag);
+}
 let _cliCatFiltro = 'todos';
 const CLI_POR_PAG = 30;
 
@@ -2724,7 +2906,7 @@ function mudarTab(t){
   _tabAtual = t;
   if(t==='home')rendHome();
   if(t==='hist')rendHist();
-  if(t==='clientes')rendClientes();
+  if(t==='clientes')subTabCli('lista');
   if(t==='reat')calcReativacao(false);
   if(t==='historico')rendHistoricoCompleto();
   if(t==='config'){rendTipos();rendPrecosTabela();atualizarStatusBackup();}
