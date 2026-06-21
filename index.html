@@ -694,6 +694,53 @@ select option{background:#0a1e38;}
 
   <!-- ===== TAB: CONFIGURAR TIPOS ===== -->
   <div id="tab-config" class="tbc">
+
+    <!-- BACKUP & EXPORTAÇÃO -->
+    <div class="card" style="margin-bottom:16px;border-color:rgba(42,171,238,.3);">
+      <div class="ctitle">🛡️ Backup & Exportação de Dados</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+        Seus dados ficam salvos na nuvem (Firebase), mas é recomendado manter uma cópia local.
+        O backup automático acontece toda semana.
+      </p>
+
+      <!-- Status do último backup -->
+      <div id="backup-status-card" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📊 Status do Backup</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <div style="font-size:13px;color:#fff;" id="backup-ultimo-label">Verificando...</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px;" id="backup-proximo-label"></div>
+          </div>
+          <div id="backup-status-badge" style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(76,175,34,.2);color:var(--green);">✅ OK</div>
+        </div>
+        <!-- Barra de progresso semanal -->
+        <div style="margin-top:10px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Próximo backup automático em <span id="backup-dias-label">—</span></div>
+          <div style="background:rgba(255,255,255,.06);border-radius:4px;height:6px;overflow:hidden;">
+            <div id="backup-progresso" style="height:100%;background:linear-gradient(90deg,var(--blue),var(--sky));border-radius:4px;transition:width .5s;width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botões de exportação -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <button class="btn btn-g" onclick="exportarJSON()" style="padding:14px 10px;font-size:13px;">
+          📦 Backup Completo<br><span style="font-size:11px;opacity:.7;font-weight:400;">Arquivo .json</span>
+        </button>
+        <button class="btn" onclick="exportarExcel()" style="padding:14px 10px;font-size:13px;background:rgba(76,175,34,.15);border-color:rgba(76,175,34,.4);color:var(--green);">
+          📊 Exportar Excel<br><span style="font-size:11px;opacity:.7;font-weight:400;">Clientes + OS</span>
+        </button>
+      </div>
+      <button class="btn btn-o" onclick="importarJSON()" style="width:100%;font-size:13px;">
+        📂 Restaurar Backup (.json)
+      </button>
+      <input type="file" id="import-file-input" accept=".json" style="display:none;" onchange="processarImport(this)">
+
+      <p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.6;text-align:center;">
+        💡 Guarde o .json no Google Drive ou WhatsApp para ter acesso de qualquer lugar
+      </p>
+    </div>
+
     <div class="card">
       <div class="ctitle">⚙️ Tipos de Estofados</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Adicione, edite ou remova os tipos que aparecem nos orçamentos.</p>
@@ -1073,7 +1120,7 @@ window.scRender = function() {
   else if(t==='clientes')rendClientes();
   else if(t==='reat')calcReativacao(false);
   else if(t==='historico')rendHistoricoCompleto();
-  else if(t==='config'){rendTipos();rendPrecosTabela();}
+  else if(t==='config'){rendTipos();rendPrecosTabela();atualizarStatusBackup();}
   else if(t==='agenda')rendAgenda();
   else if(t==='faturamento')rendFaturamento();
   else if(t==='nova-os')rendProxServicos();
@@ -1127,6 +1174,7 @@ function init(){
     rendFaturamento();
     rendHist();
     setTimeout(()=>calcReativacao(true), 800);
+    setTimeout(()=>verificarBackupAutomatico(), 2000);
     // Mostrar indicador de nuvem
     const syncEl = document.getElementById('fb-sync-status');
     if (syncEl) syncEl.style.display = 'flex';
@@ -2580,7 +2628,7 @@ function mudarTab(t){
   if(t==='clientes')rendClientes();
   if(t==='reat')calcReativacao(false);
   if(t==='historico')rendHistoricoCompleto();
-  if(t==='config'){rendTipos();rendPrecosTabela();}
+  if(t==='config'){rendTipos();rendPrecosTabela();atualizarStatusBackup();}
   if(t==='agenda')rendAgenda();
   if(t==='faturamento')rendFaturamento();
 }
@@ -2772,6 +2820,259 @@ function salvarCliente2(){
 // Listener para data/hora de agendamento no modal share
 document.getElementById('share-data-ag').addEventListener('change',atualizarAgendamentoDia);
 document.getElementById('share-hora-ag').addEventListener('change',atualizarAgendamentoDia);
+
+// ============ SISTEMA DE BACKUP ============
+
+// Chave para controle de backup automático
+const BACKUP_KEY = 'sc_ultimo_backup';
+const BACKUP_INTERVALO_DIAS = 7;
+
+function getDadosCompletos() {
+  return {
+    versao: '2.0',
+    exportadoEm: new Date().toISOString(),
+    clientes,
+    ordens,
+    historico,
+    agendamentos,
+    tipos,
+    precos,
+    mesAtual,
+    osCounter,
+    meta: window._sc ? window._sc.meta : 0
+  };
+}
+
+// ---- EXPORTAR JSON ----
+function exportarJSON(silencioso) {
+  try {
+    const dados = getDadosCompletos();
+    const json = JSON.stringify(dados, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dataStr = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = `superclean_backup_${dataStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    // Registrar data do último backup
+    localStorage.setItem(BACKUP_KEY, new Date().toISOString());
+    atualizarStatusBackup();
+    if (!silencioso) toast('📦 Backup exportado com sucesso!');
+  } catch(e) {
+    toast('❌ Erro ao exportar backup', true);
+    console.error(e);
+  }
+}
+
+// ---- EXPORTAR EXCEL (CSV formatado) ----
+function exportarExcel() {
+  try {
+    const dataStr = new Date().toISOString().slice(0,10);
+    const linhasClientes = [
+      ['=== CLIENTES ==='],
+      ['Nome', 'WhatsApp', 'Endereço', 'Cadastrado em', 'Total OS', 'Total Gasto (R$)', 'Último Serviço'],
+    ];
+    const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
+    clientes.forEach(c => {
+      const osCliente = todasOS.filter(o => o.cliId === c.id);
+      const osAprov = osCliente.filter(o => o.status === 'aprovado');
+      const totalGasto = osAprov.reduce((a, o) => a + parseFloat(o.total || 0), 0);
+      const ultima = osAprov.length ? osAprov.reduce((a, b) =>
+        new Date(a.dataFechamento||a.dataCriacao) > new Date(b.dataFechamento||b.dataCriacao) ? a : b
+      ) : null;
+      linhasClientes.push([
+        c.nome,
+        c.wpp,
+        c.end || '',
+        c.criado ? new Date(c.criado).toLocaleDateString('pt-BR') : '',
+        osCliente.length,
+        totalGasto.toFixed(2).replace('.', ','),
+        ultima ? new Date(ultima.dataFechamento||ultima.dataCriacao).toLocaleDateString('pt-BR') : ''
+      ]);
+    });
+
+    const linhasOS = [
+      [],
+      ['=== ORÇAMENTOS / OS ==='],
+      ['Nº OS', 'Cliente', 'WhatsApp', 'Data', 'Status', 'Total (R$)', 'Itens', 'Mês', 'Data Serviço', 'Motivo Recusa'],
+    ];
+    todasOS.sort((a,b) => (b.numero||0)-(a.numero||0)).forEach(o => {
+      linhasOS.push([
+        String(o.numero||'').padStart(4,'0'),
+        o.cliNome || '',
+        o.cliWpp || '',
+        o.dataCriacao ? new Date(o.dataCriacao).toLocaleDateString('pt-BR') : '',
+        o.status || '',
+        parseFloat(o.total||0).toFixed(2).replace('.', ','),
+        o.itens ? o.itens.map(i => `${i.tipo} - ${i.srvNome}`).join(' | ') : '',
+        o.mes || '',
+        o.dataServico ? new Date(o.dataServico+'T12:00:00').toLocaleDateString('pt-BR') : '',
+        o.motivoRecusa || ''
+      ]);
+    });
+
+    const linhasAg = [
+      [],
+      ['=== AGENDA ==='],
+      ['Cliente', 'WhatsApp', 'Data', 'Horário', 'Status', 'Valor (R$)', 'Serviço'],
+    ];
+    agendamentos.sort((a,b) => (a.data||'').localeCompare(b.data||'')).forEach(ag => {
+      linhasAg.push([
+        ag.cliNome || '',
+        ag.cliWpp || '',
+        ag.data ? new Date(ag.data+'T12:00:00').toLocaleDateString('pt-BR') : '',
+        ag.hora || '',
+        ag.status || '',
+        parseFloat(ag.valor||0).toFixed(2).replace('.', ','),
+        ag.servico || ''
+      ]);
+    });
+
+    const todasLinhas = [...linhasClientes, ...linhasOS, ...linhasAg];
+    const csvContent = '\uFEFF' + todasLinhas.map(row =>
+      row.map(cell => {
+        const str = String(cell === null || cell === undefined ? '' : cell);
+        return str.includes(',') || str.includes('"') || str.includes('\n')
+          ? '"' + str.replace(/"/g, '""') + '"'
+          : str;
+      }).join(';')
+    ).join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `superclean_dados_${dataStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('📊 Excel exportado! Abra no Google Planilhas ou Excel.');
+  } catch(e) {
+    toast('❌ Erro ao exportar Excel', true);
+    console.error(e);
+  }
+}
+
+// ---- IMPORTAR / RESTAURAR JSON ----
+function importarJSON() {
+  document.getElementById('import-file-input').click();
+}
+
+function processarImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const dados = JSON.parse(e.target.result);
+      // Validar que é um backup válido
+      if (!dados.clientes || !dados.ordens || !dados.versao) {
+        toast('❌ Arquivo inválido. Use um backup gerado pelo sistema.', true);
+        return;
+      }
+      confirmar(
+        '📂 Restaurar Backup',
+        `Restaurar backup de ${new Date(dados.exportadoEm).toLocaleString('pt-BR')}?\n\n` +
+        `Contém: ${dados.clientes.length} clientes, ${dados.ordens.length} OS no mês, ` +
+        `${(dados.historico||[]).reduce((a,m)=>a+(m.ordens||[]).length,0)} no histórico.\n\n` +
+        `⚠️ Os dados atuais serão substituídos.`,
+        '✅ Restaurar',
+        'btn-g',
+        () => {
+          clientes     = dados.clientes || [];
+          ordens       = dados.ordens || [];
+          historico    = dados.historico || [];
+          agendamentos = dados.agendamentos || [];
+          tipos        = dados.tipos || TIPOS_DEFAULT;
+          precos       = dados.precos || {};
+          mesAtual     = dados.mesAtual || getMesKey();
+          osCounter    = dados.osCounter || 0;
+          if (dados.meta) window._sc.meta = dados.meta;
+          salvarLocal();
+          if (window.fbSalvar) window.fbSalvar();
+          updStats(); rendHist(); rendClientes(); rendFaturamento();
+          rendTipos(); rendPrecosTabela(); rendAgenda(); rendHome();
+          atualizarStatusBackup();
+          toast('✅ Backup restaurado com sucesso!');
+        }
+      );
+    } catch(err) {
+      toast('❌ Erro ao ler arquivo. Verifique se é um .json válido.', true);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ---- BACKUP AUTOMÁTICO SEMANAL ----
+function verificarBackupAutomatico() {
+  const ultimo = localStorage.getItem(BACKUP_KEY);
+  if (!ultimo) {
+    // Primeiro uso: agendar para 7 dias
+    localStorage.setItem(BACKUP_KEY + '_agendado', new Date().toISOString());
+    atualizarStatusBackup();
+    return;
+  }
+  const diasDesde = (Date.now() - new Date(ultimo).getTime()) / (1000 * 60 * 60 * 24);
+  if (diasDesde >= BACKUP_INTERVALO_DIAS) {
+    // Chegou a hora do backup automático
+    setTimeout(() => {
+      confirmar(
+        '🛡️ Backup Semanal Automático',
+        `Já faz ${Math.floor(diasDesde)} dias desde o último backup.\n\nDeseja fazer o backup agora? (Recomendado)`,
+        '📦 Fazer Backup',
+        'btn-g',
+        () => exportarJSON(false)
+      );
+    }, 3000); // 3s após abrir o app
+  }
+  atualizarStatusBackup();
+}
+
+function atualizarStatusBackup() {
+  const el = document.getElementById('backup-ultimo-label');
+  const elProx = document.getElementById('backup-proximo-label');
+  const elBadge = document.getElementById('backup-status-badge');
+  const elProg = document.getElementById('backup-progresso');
+  const elDias = document.getElementById('backup-dias-label');
+  if (!el) return;
+
+  const ultimo = localStorage.getItem(BACKUP_KEY);
+  if (!ultimo) {
+    el.textContent = 'Nenhum backup realizado ainda';
+    if (elProx) elProx.textContent = 'Faça seu primeiro backup agora';
+    if (elBadge) { elBadge.textContent = '⚠️ Pendente'; elBadge.style.background='rgba(255,140,0,.2)'; elBadge.style.color='var(--orange)'; }
+    if (elProg) elProg.style.width = '0%';
+    if (elDias) elDias.textContent = '—';
+    return;
+  }
+
+  const dataUltimo = new Date(ultimo);
+  const diasDesde = (Date.now() - dataUltimo.getTime()) / (1000 * 60 * 60 * 24);
+  const diasRestantes = Math.max(0, BACKUP_INTERVALO_DIAS - Math.floor(diasDesde));
+  const pct = Math.min(100, (diasDesde / BACKUP_INTERVALO_DIAS) * 100);
+
+  el.textContent = 'Último: ' + dataUltimo.toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  if (elProg) elProg.style.width = pct + '%';
+
+  if (diasDesde >= BACKUP_INTERVALO_DIAS) {
+    if (elProx) elProx.textContent = '⚠️ Backup atrasado!';
+    if (elBadge) { elBadge.textContent = '⚠️ Atrasado'; elBadge.style.background='rgba(229,57,53,.2)'; elBadge.style.color='var(--red)'; }
+    if (elDias) elDias.textContent = 'hoje (atrasado)';
+    if (elProg) elProg.style.background = 'linear-gradient(90deg,#e53935,#ff6b6b)';
+  } else {
+    if (elProx) elProx.textContent = `Próximo backup em ${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''}`;
+    if (elBadge) { elBadge.textContent = '✅ OK'; elBadge.style.background='rgba(76,175,34,.2)'; elBadge.style.color='var(--green)'; }
+    if (elDias) elDias.textContent = diasRestantes === 0 ? 'hoje' : `${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''}`;
+    if (elProg) elProg.style.background = 'linear-gradient(90deg,var(--blue),var(--sky))';
+  }
+}
+
 
 init();
 </script>
