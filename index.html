@@ -40,6 +40,9 @@ header{background:rgba(7,18,42,.95);border-bottom:1px solid var(--border);paddin
 .home-card{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;}
 .home-card .hc-num{font-size:22px;font-weight:800;color:#fff;line-height:1;}
 .home-card .hc-label{font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}
+.home-card-clicavel{transition:transform .15s,opacity .15s,border-color .15s;}
+.home-card-clicavel:hover{transform:scale(1.02);border-color:rgba(42,171,238,0.35);}
+.home-card-clicavel:active{transform:scale(.97);opacity:.85;}
 .home-rodape{background:rgba(76,175,34,.08);border:1px solid rgba(76,175,34,.2);border-radius:12px;padding:14px 16px;text-align:center;margin-bottom:20px;font-size:14px;font-weight:700;color:var(--green);}
 .home-cal{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;}
 .home-cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
@@ -365,7 +368,7 @@ select option{background:#0a1e38;}
       <button class="home-btn verde" onclick="mudarTab('agenda')">
         <span class="home-btn-icon">📅</span>Agendamento
       </button>
-      <button class="home-btn verde" onclick="abrirModalCliente()">
+      <button class="home-btn verde" onclick="irParaNovoCliente()">
         <span class="home-btn-icon">👤</span>Novo Cliente
       </button>
       <button class="home-btn azul" onclick="mudarTab('faturamento')">
@@ -375,35 +378,35 @@ select option{background:#0a1e38;}
 
     <!-- Cards resumo -->
     <div class="home-resumo">
-      <div class="home-card">
+      <div class="home-card home-card-clicavel" onclick="mudarTab('agenda');agendaHoje();" style="cursor:pointer;">
         <div class="hc-num" id="hc-hoje" style="color:var(--sky)">0</div>
         <div class="hc-label">📅 Agenda hoje</div>
       </div>
-      <div class="home-card">
+      <div class="home-card home-card-clicavel" onclick="mudarTab('faturamento')" style="cursor:pointer;">
         <div class="hc-num" id="hc-fat" style="color:var(--green);font-size:16px;">R$ 0</div>
         <div class="hc-label">💰 Faturado mês</div>
       </div>
-      <div class="home-card">
+      <div class="home-card home-card-clicavel" onclick="irParaOSPendentes()" style="cursor:pointer;">
         <div class="hc-num" id="hc-pend" style="color:var(--orange)">0</div>
         <div class="hc-label">📋 OS Pendentes</div>
       </div>
-      <div class="home-card">
+      <div class="home-card home-card-clicavel" onclick="mudarTab('clientes')" style="cursor:pointer;">
         <div class="hc-num" id="hc-cli" style="color:var(--sky)">0</div>
         <div class="hc-label">👥 Clientes</div>
       </div>
-      <div class="home-card" onclick="mudarTab('agenda')" style="cursor:pointer;">
+      <div class="home-card home-card-clicavel" onclick="irParaAgendaAmanha()" style="cursor:pointer;">
         <div class="hc-num" id="hc-amanha" style="color:var(--sky)">0</div>
         <div class="hc-label">📆 Agenda amanhã</div>
       </div>
-      <div class="home-card" onclick="mudarTab('reat')" style="cursor:pointer;">
+      <div class="home-card home-card-clicavel" onclick="mudarTab('reat')" style="cursor:pointer;">
         <div class="hc-num" id="hc-reat" style="color:var(--orange)">0</div>
         <div class="hc-label">🔔 Para reativar</div>
       </div>
-      <div class="home-card">
+      <div class="home-card home-card-clicavel" onclick="mudarTab('faturamento')" style="cursor:pointer;">
         <div class="hc-num" id="hc-ticket" style="font-size:14px;">R$ 0</div>
         <div class="hc-label">🎯 Ticket médio</div>
       </div>
-      <div class="home-card">
+      <div class="home-card home-card-clicavel" onclick="irParaAprovadas()" style="cursor:pointer;">
         <div class="hc-num" id="hc-aprov" style="color:var(--green)">0</div>
         <div class="hc-label">✅ Aprovadas mês</div>
       </div>
@@ -2967,6 +2970,31 @@ function mudarTab(t){
   if(t==='agenda')rendAgenda();
   if(t==='faturamento')rendFaturamento();
 }
+/* === NAVEGAÇÃO DASHBOARD === */
+function irParaNovoCliente(){
+  mudarTab('clientes');
+  subTabCli('novo');
+  setTimeout(()=>{
+    const el=document.getElementById('nc2-nome');
+    if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.focus();}
+  },100);
+}
+function irParaOSPendentes(){
+  mudarTab('hist');
+  const btnPend=Array.from(document.querySelectorAll('.filtro-btn')).find(b=>b.textContent.includes('Pendentes'));
+  if(btnPend)setFiltroMes('pendente',btnPend);
+}
+function irParaAprovadas(){
+  mudarTab('hist');
+  const btnAprov=Array.from(document.querySelectorAll('.filtro-btn')).find(b=>b.textContent.includes('Aprovados'));
+  if(btnAprov)setFiltroMes('aprovado',btnAprov);
+}
+function irParaAgendaAmanha(){
+  const d=new Date();d.setDate(d.getDate()+1);
+  agendaMes=d.getMonth();agendaAno=d.getFullYear();
+  mudarTab('agenda');
+}
+/* === FIM NAVEGAÇÃO DASHBOARD === */
 function abrirModal(id){document.getElementById(id).classList.add('open');}
 function fecharModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(m=>{
