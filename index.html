@@ -461,8 +461,12 @@ select option{background:#0a1e38;}
       </div>
 
       <div class="field">
+        <label>Local do Serviço (endereço)</label>
+        <input type="text" id="local-servico" placeholder="Bairro, rua ou referência..." autocomplete="off">
+      </div>
+      <div class="field">
         <label>Observações</label>
-        <textarea id="obs" rows="2" placeholder="Observações opcionais..."></textarea>
+        <textarea id="obs" rows="2" placeholder="Ex: sofá com mancha de vinho, colchão com odor..."></textarea>
       </div>
     </div>
 
@@ -661,6 +665,12 @@ select option{background:#0a1e38;}
       <div class="grafico-bars" id="grafico-bars"></div>
     </div>
 
+    <!-- Breakdown formas de pagamento -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="ctitle">💳 Recebimentos por Forma de Pagamento</div>
+      <div id="fat-pgto-breakdown"><div class="empty" style="font-size:12px;">Sem dados este mês</div></div>
+    </div>
+
     <!-- Lista vendas fechadas do mês -->
     <div class="card">
       <div class="ctitle">🟢 Orçamentos Aprovados — Mês Atual</div>
@@ -741,20 +751,13 @@ select option{background:#0a1e38;}
 
   </div>
   <div id="tab-hist" class="tbc">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#fff;" id="hist-title">Orçamentos</div>
-        <div style="font-size:13px;color:var(--muted);" id="hist-sub">—</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#fff;" id="hist-title">Orçamentos em Aberto</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px;" id="hist-sub">—</div>
       </div>
-      <button class="btn btn-orange" onclick="confirmarVirarMes()">🔄 Virar Mês</button>
     </div>
-    <div class="filtro-status">
-      <button class="filtro-btn ativo" onclick="setFiltroMes('todos',this)">Todos</button>
-      <button class="filtro-btn" onclick="setFiltroMes('aprovado',this)">🟢 Aprovados</button>
-      <button class="filtro-btn" onclick="setFiltroMes('pendente',this)">🟡 Pendentes</button>
-      <button class="filtro-btn" onclick="setFiltroMes('recusado',this)">🔴 Recusados</button>
-      <button class="filtro-btn" onclick="setFiltroMes('cancelado',this)">⚫ Cancelados</button>
-    </div>
+    <input type="text" id="orc-busca" placeholder="🔍 Buscar por cliente ou nº OS..." oninput="rendHist()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
     <div id="lista-hist"></div>
   </div>
   <div id="tab-historico" class="tbc">
@@ -849,17 +852,7 @@ select option{background:#0a1e38;}
   </div>
 </div>
 
-<!-- MODAL VIRAR MÊS -->
-<div class="modal-overlay" id="modal-virar">
-  <div class="modal">
-    <div class="modal-title">🔄 Virar Mês</div>
-    <div id="modal-virar-resumo" style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:20px;"></div>
-    <div class="brow">
-      <button class="btn btn-o" onclick="fecharModal('modal-virar')" style="flex:1;">Cancelar</button>
-      <button class="btn btn-orange" onclick="virarMes()" style="flex:1;">✅ Confirmar</button>
-    </div>
-  </div>
-</div>
+<!-- Modal virar mês removido — sistema automático -->
 <div class="modal-overlay" id="modal-share">
   <div class="modal" style="max-width:600px;">
     <div class="modal-title">📤 Compartilhar Orçamento</div>
@@ -879,6 +872,20 @@ select option{background:#0a1e38;}
         <div class="aprov-row">
           <div class="field"><label>Data do Serviço</label><input type="date" id="share-data-ag"></div>
           <div class="field"><label>Horário</label><input type="time" id="share-hora-ag" value="08:00"></div>
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Forma de Pagamento</label>
+          <select id="share-pgto" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);">
+            <option value="">Não informado</option>
+            <option value="PIX">💳 PIX</option>
+            <option value="Dinheiro">💵 Dinheiro</option>
+            <option value="Cartão Débito">💳 Cartão Débito</option>
+            <option value="Cartão Crédito">💳 Cartão Crédito</option>
+            <option value="Cartão 2x">💳 Cartão 2x</option>
+            <option value="Cartão 3x">💳 Cartão 3x</option>
+            <option value="Cartão 4x">💳 Cartão 4x</option>
+            <option value="Cartão 5x">💳 Cartão 5x</option>
+          </select>
         </div>
         <div style="font-size:11px;color:var(--muted);">📌 Ao salvar, o serviço entra automaticamente na Agenda e no Faturamento.</div>
       </div>
@@ -946,9 +953,23 @@ select option{background:#0a1e38;}
 <!-- MODAL APROVAR OS (data/hora sem prompt) -->
 <div class="modal-overlay" id="modal-aprovar-os">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-title">📅 Informar Data do Serviço</div>
+    <div class="modal-title">✅ Aprovar Serviço</div>
     <div class="field"><label>Data do Serviço *</label><input type="date" id="modal-aprovar-data"></div>
     <div class="field"><label>Horário *</label><input type="time" id="modal-aprovar-hora" value="08:00"></div>
+    <div class="field">
+      <label>Forma de Pagamento</label>
+      <select id="modal-aprovar-pgto" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);">
+        <option value="">Não informado</option>
+        <option value="PIX">💳 PIX</option>
+        <option value="Dinheiro">💵 Dinheiro</option>
+        <option value="Cartão Débito">💳 Cartão Débito</option>
+        <option value="Cartão Crédito">💳 Cartão Crédito</option>
+        <option value="Cartão 2x">💳 Cartão 2x</option>
+        <option value="Cartão 3x">💳 Cartão 3x</option>
+        <option value="Cartão 4x">💳 Cartão 4x</option>
+        <option value="Cartão 5x">💳 Cartão 5x</option>
+      </select>
+    </div>
     <div class="brow">
       <button class="btn btn-o" onclick="fecharModal('modal-aprovar-os')" style="flex:1;">Cancelar</button>
       <button class="btn btn-g" id="modal-aprovar-ok" style="flex:1;">✅ Aprovar</button>
@@ -1018,7 +1039,7 @@ window.fbSalvar = async function() {
       agendamentos: JSON.stringify(window._sc.agendamentos),
       tipos:        JSON.stringify(window._sc.tipos),
       precos:       JSON.stringify(window._sc.precos),
-      mesAtual:     window._sc.mesAtual,
+      mesAtual:     getMesKey(), // sempre o mês real
       osCounter:    String(window._sc.osCounter),
       meta:         String(window._sc.meta||0),
       updatedAt:    new Date().toISOString()
@@ -1086,7 +1107,7 @@ onSnapshot(REF, (snap) => {
     if(d.agendamentos) { window._sc.agendamentos = JSON.parse(d.agendamentos); localStorage.setItem('sc_agenda',     d.agendamentos); }
     if(d.tipos)        { window._sc.tipos        = JSON.parse(d.tipos)||window._sc.TIPOS_DEFAULT; localStorage.setItem('sc_tipos', d.tipos); }
     if(d.precos)       { window._sc.precos       = JSON.parse(d.precos);       localStorage.setItem('sc_precos',     d.precos); }
-    if(d.mesAtual)     { window._sc.mesAtual     = d.mesAtual;                 localStorage.setItem('sc_mes_atual',  d.mesAtual); }
+    // mesAtual não é mais sincronizado — é sempre getMesKey() local
     if(d.osCounter)    { window._sc.osCounter    = parseInt(d.osCounter||'0'); localStorage.setItem('sc_os_counter', d.osCounter); }
     if(d.meta)         { window._sc.meta         = parseFloat(d.meta||'0');    localStorage.setItem('sc_meta',       d.meta); }
     if (_fbLoaded && window.scRender) {
@@ -1115,7 +1136,7 @@ Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]
       if(d.agendamentos) localStorage.setItem('sc_agenda',     d.agendamentos);
       if(d.tipos)        localStorage.setItem('sc_tipos',      d.tipos);
       if(d.precos)       localStorage.setItem('sc_precos',     d.precos);
-      if(d.mesAtual)     localStorage.setItem('sc_mes_atual',  d.mesAtual);
+      // mesAtual não restaurado do Firebase — sempre usa calendário real
       if(d.osCounter)    localStorage.setItem('sc_os_counter', d.osCounter);
       if(d.meta)         localStorage.setItem('sc_meta',       d.meta);
     } else {
@@ -1174,7 +1195,8 @@ let historico  = [];
 let agendamentos = [];
 let tipos      = TIPOS_DEFAULT;
 let precos     = {};
-let mesAtual   = getMesKey();
+// mesAtual é sempre o mês real do calendário — automático, sem virada manual
+let mesAtual   = getMesKey(); // Readonly na prática: sempre sincronizado com getMesKey()
 let osCounter  = 0;
 let cliSelecionado = null;
 let osCompartilhar = null;
@@ -1210,7 +1232,7 @@ window.showCloudToast = function(){ showCloudToast(); };
 window.scRender = function() {
   invalidarCatCache();
   updStats();
-  document.getElementById('hmes').textContent = getMesLabel(mesAtual);
+  mesAtual = getMesKey(); document.getElementById('hmes').textContent = getMesLabel(mesAtual);
   const t = window._tabAtual || 'home';
   if(t==='home')rendHome();
   else if(t==='hist')rendHist();
@@ -1263,7 +1285,7 @@ function init(){
       clientes=[]; ordens=[]; historico=[]; agendamentos=[];
       tipos=TIPOS_DEFAULT; precos={};
     }
-    mesAtual  = localStorage.getItem('sc_mes_atual') || getMesKey();
+    mesAtual  = getMesKey(); // Sempre usa o mês real — sem virada manual
     osCounter = parseInt(localStorage.getItem('sc_os_counter') ||'0');
     meta      = parseFloat(localStorage.getItem('sc_meta')     ||'0');
     mudarTab('home');
@@ -1271,6 +1293,8 @@ function init(){
     const proxOS=osCounter+1;
     document.getElementById('os-num-badge').textContent='OS #'+String(proxOS).padStart(4,'0');
     document.getElementById('data-orc').value=hoje();
+  const localOsEl=document.getElementById('local-servico');
+  if(localOsEl)localOsEl.value='';
     addItem();
     updStats();
     rendTipos();
@@ -1312,7 +1336,7 @@ function salvarLocal(clientesMudaram){
   localStorage.setItem('sc_agenda',     JSON.stringify(agendamentos));
   localStorage.setItem('sc_tipos',      JSON.stringify(tipos));
   localStorage.setItem('sc_precos',     JSON.stringify(precos));
-  localStorage.setItem('sc_mes_atual',  mesAtual);
+  // sc_mes_atual não é mais usado — mês é sempre o calendário real
   localStorage.setItem('sc_os_counter', String(osCounter));
   // Timestamp local para proteção anti-sobrescrita do Firebase
   localStorage.setItem('sc_local_ts',   String(Date.now()));
@@ -1361,12 +1385,17 @@ function selecionarCliente(id){
   document.getElementById('cli-selecionado').style.display='block';
   document.getElementById('cli-sel-nome').textContent=c.nome;
   document.getElementById('cli-sel-info').textContent=c.wpp+(c.end?' · '+c.end:'');
+  // Preencher local com endereço do cliente (editável)
+  const localEl=document.getElementById('local-servico');
+  if(localEl&&c.end&&!localEl.value)localEl.value=c.end;
 }
 function limparCliente(){
   cliSelecionado=null;
   document.getElementById('cli-input').style.display='block';
   document.getElementById('cli-input').value='';
   document.getElementById('cli-selecionado').style.display='none';
+  const localEl=document.getElementById('local-servico');
+  if(localEl)localEl.value='';
 }
 let _cliPagina = 0;
 let _rankPeriodo = 'total';
@@ -1696,7 +1725,7 @@ function verCliente(id){
     🕐 Último serviço: <strong style="color:#fff;">${new Date(ultimaOS.dataFechamento||ultimaOS.dataCriacao).toLocaleDateString('pt-BR')}</strong> · ${fmtMoeda(ultimaOS.total)}
   </div>`:''}
   ${os.length?'<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Histórico de OS</div>'+
-  os.slice(-8).reverse().map(o=>`<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;">
+  os.slice().reverse().map(o=>`<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <span style="font-size:12px;color:var(--sky);font-weight:600;">OS #${String(o.numero).padStart(4,'0')}</span>
       <span style="font-size:13px;font-weight:700;color:var(--green);">${fmtMoeda(o.total)}</span>
@@ -1818,9 +1847,10 @@ function salvarOS(){
     id:Date.now(),numero:osCounter,
     cliId:cliSelecionado.id,cliNome:cliSelecionado.nome,cliWpp:cliSelecionado.wpp,cliEnd:cliSelecionado.end||'',
     itens,subtotal:sub,desconto,total,dataOrc,
+    localServico:document.getElementById('local-servico')?.value.trim()||'',
     obs:document.getElementById('obs').value.trim(),
     status:'pendente',
-    dataCriacao:new Date().toISOString(),mes:mesAtual,
+    dataCriacao:new Date().toISOString(),mes:getMesKey(), // mês real automático
     dataServico:dataServPrev||undefined,
     horaServico:horaServPrev||undefined,
   };
@@ -1898,10 +1928,12 @@ function updStatusShare(){
     }
     // Aplicar aprovação
     os.status='aprovado';
-    os.mes=mesAtual; // garante que conta no faturamento do mês correto
+    os.mes=getMesKey(); // mês real do fechamento
     os.dataFechamento=new Date().toISOString();
     os.dataServico=dataAg;
     os.horaServico=horaAg;
+    const pgtoShareEl=document.getElementById('share-pgto');
+    if(pgtoShareEl&&pgtoShareEl.value)os.formaPgto=pgtoShareEl.value;
     delete os.motivoRecusa;
     // Criar/atualizar agendamento
     agendamentos=agendamentos.filter(a=>a.osId!==os.id);
@@ -1940,12 +1972,13 @@ function criarAgendamento(os, data, hora){
     cliId:os.cliId,
     cliNome:os.cliNome,
     cliWpp:os.cliWpp,
-    cliEnd:os.cliEnd,
+    cliEnd:os.localServico||os.cliEnd, // usa local do serviço se definido
     data:data,
     hora:hora||'08:00',
     valor:os.total,
     servico:os.itens.map(i=>i.tipo+' ('+i.srvNome+')').join(', '),
     obs:os.obs||'',
+    formaPgto:os.formaPgto||'',
     status:'confirmado',
     criadoEm:new Date().toISOString()
   };
@@ -1980,7 +2013,8 @@ function gerarTextoWpp(os){
     return `✅ ${qtd}${i.tipo} — ${i.srvNome}: ${fmtMoeda(i.sub)}`;
   }).join('\n');
   const dataOrc=os.dataOrc?fmtData(os.dataOrc):new Date(os.dataCriacao).toLocaleDateString('pt-BR');
-  return `Olá, ${os.cliNome}! 👋\n\nSegue o orçamento da *SUPER CLEAN - Higienização* 🧹✨\n📋 OS #${String(os.numero).padStart(4,'0')}\n📅 Data: ${dataOrc}\n\n*SERVIÇOS:*\n${itens}\n\n━━━━━━━━━━━━━━━━━━\n💰 *TOTAL: ${fmtMoeda(os.total)}*\n━━━━━━━━━━━━━━━━━━\n${os.obs?'📝 '+os.obs+'\n':''}\n📞 Para confirmar, responda essa mensagem!\n\n🌐 supercleandourados.com.br`;
+  const localLinha=os.localServico?`📍 Local: ${os.localServico}\n`:'';
+  return `Olá, ${os.cliNome}! 👋\n\nSegue o orçamento da *SUPER CLEAN - Higienização* 🧹✨\n📋 OS #${String(os.numero).padStart(4,'0')}\n📅 Data: ${dataOrc}\n${localLinha}\n*SERVIÇOS:*\n${itens}\n\n━━━━━━━━━━━━━━━━━━\n💰 *TOTAL: ${fmtMoeda(os.total)}*\n━━━━━━━━━━━━━━━━━━\n${os.obs?'📝 '+os.obs+'\n':''}\n📞 Para confirmar, responda essa mensagem!\n\n🌐 supercleandourados.com.br`;
 }
 function copiarWpp(){
   if(!osCompartilhar)return;
@@ -2133,12 +2167,18 @@ function renderOS(o,comActions,isHistorico){
   const sc={pendente:'sp',aprovado:'sf',recusado:'sr',cancelado:'st-canc'}[o.status]||'sp';
   const dt=new Date(o.dataCriacao).toLocaleDateString('pt-BR');
   const res=o.itens.map(i=>(i.qtd>1?i.qtd+'× ':'')+i.tipo+' ('+i.srvNome+')').join(', ');
-  // Tag de mês de origem — só aparece em Orçamentos (não no Histórico)
-  // Indica que a OS é pendente de mês anterior que foi carregada no mês atual
-  const mesDaOS = o.mes || mesAtual;
-  const tagOrigem = (!isHistorico && mesDaOS !== mesAtual)
-    ? `<span style="font-size:10px;background:rgba(255,140,0,.18);color:var(--orange);border:1px solid rgba(255,140,0,.35);border-radius:5px;padding:2px 7px;white-space:nowrap;">📌 Origem: ${getMesLabel(mesDaOS)}</span>`
-    : '';
+  // Indicador de dias aguardando — só para pendentes na aba Orçamentos
+  let tagOrigem = '';
+  if(!isHistorico && o.status==='pendente'){
+    const diasAguard=Math.floor((Date.now()-new Date(o.dataCriacao))/(1000*60*60*24));
+    if(diasAguard===0){
+      tagOrigem='<span style="font-size:10px;background:rgba(42,171,238,.15);color:var(--sky);border:1px solid rgba(42,171,238,.3);border-radius:5px;padding:2px 7px;">🕐 Hoje</span>';
+    } else if(diasAguard<=2){
+      tagOrigem=`<span style="font-size:10px;background:rgba(255,140,0,.15);color:var(--orange);border:1px solid rgba(255,140,0,.3);border-radius:5px;padding:2px 7px;">⏳ ${diasAguard} dia${diasAguard>1?'s':''} aguardando</span>`;
+    } else {
+      tagOrigem=`<span style="font-size:10px;background:rgba(229,57,53,.15);color:var(--red);border:1px solid rgba(229,57,53,.3);border-radius:5px;padding:2px 7px;animation:pulse 2s infinite;">🔴 ${diasAguard} dias sem resposta</span>`;
+    }
+  }
   let actions='';
   if(comActions){
     actions=`<div class="brow-os">
@@ -2160,8 +2200,10 @@ function renderOS(o,comActions,isHistorico){
     </div>
     <div class="hinfo">
       <span>📅 ${dt}</span>
+      ${o.localServico?`<span>📍 ${o.localServico}</span>`:''}
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${res}</span>
       <span class="hst ${sc}">${o.status==='aprovado'?'🟢 Aprovada':o.status==='recusado'?'🔴 Recusada':o.status==='cancelado'?'⚫ Cancelada':'🟡 Pendente'}</span>
+      ${o.formaPgto?`<span style="font-size:10px;background:rgba(27,111,216,.15);color:var(--sky);border:1px solid rgba(27,111,216,.3);border-radius:5px;padding:2px 7px;">${o.formaPgto}</span>`:''}
     </div>
     ${tagOrigem ? `<div style="margin-top:5px;">${tagOrigem}</div>` : ''}
     ${actions}</div>`;
@@ -2171,13 +2213,20 @@ let _histPage=20;
 function rendHist(resetPage){
   if(resetPage)_histPage=20;
   const lista=document.getElementById('lista-hist');
-  document.getElementById('hist-title').textContent='Orçamentos — '+getMesLabel(mesAtual);
-  document.getElementById('hist-sub').textContent=ordens.length+' ordem(ns) · '+fmtMoeda(ordens.reduce((a,o)=>a+o.total,0));
-  const filtradas=filtroMesAtual==='todos'?ordens:ordens.filter(o=>o.status===filtroMesAtual);
-  const visiveis=filtradas.slice(0,_histPage);
-  let html=visiveis.length?visiveis.map(o=>renderOS(o,true)).join(''):'<div class="empty">Nenhuma OS com esse filtro</div>';
-  if(filtradas.length>_histPage){
-    html+=`<button class="btn btn-o" style="width:100%;margin-top:12px;" onclick="_histPage+=20;rendHist()">Ver mais (${filtradas.length-_histPage} restantes)</button>`;
+  // Orçamentos = apenas OS em aberto (pendentes)
+  // OS aprovadas, recusadas e canceladas ficam no Histórico
+  const busca=(document.getElementById('orc-busca')?.value||'').toLowerCase().trim();
+  let abertas = ordens.filter(o=>o.status==='pendente');
+  if(busca) abertas=abertas.filter(o=>o.cliNome?.toLowerCase().includes(busca)||String(o.numero).includes(busca)||o.cliWpp?.includes(busca));
+  document.getElementById('hist-title').textContent='Orçamentos em Aberto';
+  const totalVal = abertas.reduce((a,o)=>a+parseFloat(o.total||0),0);
+  document.getElementById('hist-sub').textContent=abertas.length+' pendente(s) · '+fmtMoeda(totalVal);
+  // Ordenar: mais recentes primeiro
+  const ordenadas=[...abertas].sort((a,b)=>new Date(b.dataCriacao)-new Date(a.dataCriacao));
+  const visiveis=ordenadas.slice(0,_histPage);
+  let html=visiveis.length?visiveis.map(o=>renderOS(o,true)).join(''):'<div class="empty" style="padding:20px 0;">🎉 Nenhum orçamento pendente</div>';
+  if(abertas.length>_histPage){
+    html+=`<button class="btn btn-o" style="width:100%;margin-top:12px;" onclick="_histPage+=20;rendHist()">Ver mais (${abertas.length-_histPage} restantes)</button>`;
   }
   lista.innerHTML=html;
 }
@@ -2342,6 +2391,7 @@ function buildAgCard(ag,noModal){
       <span>🕐 ${ag.hora||'—'}</span>
       <span>📱 ${ag.cliWpp||'—'}</span>
       <span>📍 ${ag.cliEnd||'Dourados-MS'}</span>
+      ${ag.formaPgto?`<span style="grid-column:span 2;">💳 ${ag.formaPgto}</span>`:''}
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">🛋️ ${ag.servico||'—'}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -2358,7 +2408,13 @@ function buildAgCard(ag,noModal){
   </div>`;
 }
 function getFechadasMes(){
-  return ordens.filter(o=>o.status==='aprovado'&&o.mes===mesAtual);
+  // Filtra por dataFechamento no mês atual do calendário — sem depender de o.mes
+  const key = getMesKey();
+  const todasAprov = [...ordens, ...historico.flatMap(m=>m.ordens||[])].filter(o=>o.status==='aprovado');
+  return todasAprov.filter(o=>{
+    const df = o.dataFechamento || o.dataCriacao;
+    return df && df.slice(0,7) === key;
+  });
 }
 function getFechadasTodas(){
   return[...ordens,...historico.flatMap(m=>m.ordens||[])].filter(o=>o.status==='aprovado');
@@ -2400,6 +2456,21 @@ function rendFaturamento(){
   rendCliTipo();
 
   // Lista mês
+  // Breakdown por forma de pagamento
+  const pgtoMap={};
+  mesOrd.forEach(o=>{
+    const pg=o.formaPgto||'Não informado';
+    pgtoMap[pg]=(pgtoMap[pg]||0)+parseFloat(o.total||0);
+  });
+  const pgtoEl=document.getElementById('fat-pgto-breakdown');
+  if(pgtoEl){
+    const entries=Object.entries(pgtoMap).sort((a,b)=>b[1]-a[1]);
+    pgtoEl.innerHTML=entries.length?entries.map(([pg,val])=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text);">${pg}</span>
+        <span style="font-size:13px;font-weight:700;color:var(--green);">${fmtMoeda(val)}</span>
+      </div>`).join(''):'<div class="empty" style="font-size:12px;">Sem dados</div>';
+  }
   const listaEl=document.getElementById('fat-lista-mes');
   if(!mesOrd.length){listaEl.innerHTML='<div class="empty">Nenhuma venda fechada este mês</div>';return;}
   listaEl.innerHTML=mesOrd.sort((a,b)=>new Date(b.dataFechamento||b.dataCriacao)-new Date(a.dataFechamento||a.dataCriacao))
@@ -2410,7 +2481,9 @@ function rendFaturamento(){
       </div>
       <div class="hinfo">
         <span>📅 ${new Date(o.dataFechamento||o.dataCriacao).toLocaleDateString('pt-BR')}</span>
-        <span>${o.itens?.map(i=>i.tipo+'('+i.srvNome+')').join(', ')||''}</span>
+        ${o.localServico?`<span>📍 ${o.localServico}</span>`:''}
+        ${o.formaPgto?`<span style="font-size:10px;background:rgba(27,111,216,.12);color:var(--sky);border:1px solid rgba(27,111,216,.25);border-radius:4px;padding:1px 6px;">${o.formaPgto}</span>`:''}
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.itens?.map(i=>i.tipo).join(', ')||''}</span>
       </div>
     </div>`).join('');
 }
@@ -2467,115 +2540,63 @@ function rendHistoricoCompleto(){
   const buscaEl=document.getElementById('hist-busca');
   const busca=(buscaEl?.value||'').toLowerCase().trim();
   const el=document.getElementById('lista-historico');
-  if(!historico.length){el.innerHTML='<div class="empty">Nenhum mês arquivado ainda</div>';return;}
-  el.innerHTML=[...historico].reverse().map(m=>{
-    const total=m.ordens.reduce((a,o)=>a+parseFloat(o.total),0);
-    const ordFilt=busca?m.ordens.filter(o=>o.cliNome?.toLowerCase().includes(busca)):m.ordens;
-    const fc=ordFilt.filter(o=>o.status==='aprovado').length;
-    const mid='mes_'+m.mesKey.replace('-','_');
+
+  // Histórico = todas as OS resolvidas: aprovadas, recusadas e canceladas
+  // ordens[] contém as resolvidas recentes; historico[] contém o legado arquivado
+  const todasResolvidas = [
+    ...ordens.filter(o=>o.status!=='pendente'),
+    ...historico.flatMap(m=>m.ordens||[]).filter(o=>o.status!=='pendente')
+  ];
+
+  // Filtrar por busca
+  const filtradas = busca
+    ? todasResolvidas.filter(o=>o.cliNome?.toLowerCase().includes(busca)||String(o.numero).includes(busca))
+    : todasResolvidas;
+
+  if(!filtradas.length){
+    el.innerHTML='<div class="empty">Nenhum serviço fechado ainda</div>';
+    return;
+  }
+
+  // Agrupar por mês de fechamento (dataFechamento ou dataCriacao)
+  const grupos={};
+  filtradas.forEach(o=>{
+    const df = o.dataFechamento||o.dataCriacao||'';
+    const key = df.slice(0,7); // YYYY-MM
+    if(!grupos[key])grupos[key]=[];
+    grupos[key].push(o);
+  });
+
+  // Ordenar meses do mais recente ao mais antigo
+  const mesesOrdenados=Object.keys(grupos).sort((a,b)=>b.localeCompare(a));
+
+  el.innerHTML=mesesOrdenados.map(key=>{
+    const oss=grupos[key].sort((a,b)=>new Date(b.dataFechamento||b.dataCriacao)-new Date(a.dataFechamento||a.dataCriacao));
+    const totalMes=oss.filter(o=>o.status==='aprovado').reduce((a,o)=>a+parseFloat(o.total||0),0);
+    const nAprov=oss.filter(o=>o.status==='aprovado').length;
+    const nRecus=oss.filter(o=>o.status==='recusado'||o.status==='cancelado').length;
+    const mid='mes_'+key.replace('-','_');
     return `<div class="mes-group">
       <div class="mes-header" onclick="document.getElementById('${mid}').classList.toggle('open')">
-        <div class="mes-title">📅 ${getMesLabel(m.mesKey)}</div>
-        <div class="mes-stats">${m.ordens.length} OS · ${fc} fechadas · ${fmtMoeda(total)}</div>
+        <div class="mes-title">📅 ${getMesLabel(key)}</div>
+        <div class="mes-stats">${nAprov>0?'🟢 '+nAprov+' aprovada'+(nAprov!==1?'s':''):''}${nAprov>0&&nRecus>0?' · ':''}${nRecus>0?'🔴 '+nRecus+' recusada'+(nRecus!==1?'s/canceladas':''):''}${nAprov>0?' · '+fmtMoeda(totalMes):''}</div>
       </div>
       <div class="mes-body" id="${mid}">
-        ${m.ordens.map(o=>`${renderOS(o,false,true)}<div style="margin-bottom:4px;"><button class="btn" style="padding:5px 10px;font-size:11px;background:rgba(100,180,255,.12);color:var(--sky);border:1px solid rgba(100,180,255,.3);margin-top:-4px;" onclick="abrirCompartilhar(${o.id})">📤 Compartilhar</button></div>`).join('')}
+        ${oss.map(o=>`${renderOS(o,false,true)}<div style="margin-bottom:4px;"><button class="btn" style="padding:5px 10px;font-size:11px;background:rgba(100,180,255,.12);color:var(--sky);border:1px solid rgba(100,180,255,.3);margin-top:-4px;" onclick="abrirCompartilhar(${o.id})">📤 Compartilhar</button></div>`).join('')}
       </div>
     </div>`;
   }).join('');
 }
 function confirmarVirarMes(){
-  const pendentes   = ordens.filter(o => o.status === 'pendente');
-  const aprovadas   = ordens.filter(o => o.status === 'aprovado');
-  const recusadas   = ordens.filter(o => o.status === 'recusado' || o.status === 'cancelado');
-  const [ano, mes]  = mesAtual.split('-');
-  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  const nomeMes = meses[parseInt(mes)-1]+'/'+ano;
-  const total = ordens.length;
-
-  const el = document.getElementById('modal-virar-resumo');
-  if (el) {
-    el.innerHTML = `
-      <strong style="color:#fff;">Resumo de ${nomeMes} (${total} OS no total):</strong><br><br>
-      🟢 ${aprovadas.length} aprovada${aprovadas.length!==1?'s':''} → <strong style="color:#fff;">arquivadas no histórico</strong><br>
-      🔴 ${recusadas.length} recusada/cancelada${recusadas.length!==1?'s':''} → <strong style="color:#fff;">arquivadas no histórico</strong><br>
-      🟡 ${pendentes.length} pendente${pendentes.length!==1?'s':''} → <strong style="color:#ffc800;">permanecem abertas (não somem)</strong><br>
-      <br>
-      <div style="background:rgba(76,175,34,.08);border:1px solid rgba(76,175,34,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--muted);line-height:1.6;">
-        ✅ Nenhuma OS é apagada.<br>
-        ✅ Pendentes ficam visíveis em Orçamentos com a tag do mês de origem.<br>
-        ✅ Aprovadas e recusadas ficam acessíveis em 🗂️ Histórico.
-      </div>`;
-  }
-  abrirModal('modal-virar');
+  // Virada de mês agora é automática — esta função não faz mais nada
+  toast('✅ O sistema vira o mês automaticamente pelo calendário!');
 }
 function virarMes(){
-  // ── REGRA DE NEGÓCIO (NUNCA ALTERAR) ──────────────────────────────────────
-  // • Pendentes  → permanecem em ordens[], NÃO vão pro histórico, JAMAIS somem
-  // • Aprovadas  → vão pro historico[] do mês encerrado
-  // • Recusadas/Canceladas → vão pro historico[] do mês encerrado
-  // • Nenhuma OS pode ser apagada ou perder dados ao virar o mês
-  // ──────────────────────────────────────────────────────────────────────────
-
-  // Snapshot de segurança ANTES de qualquer alteração
-  const totalAntes = ordens.length;
-  const mesEncerrado = mesAtual;
-
-  const pendentes    = ordens.filter(o => o.status === 'pendente');
-  const paraArquivar = ordens.filter(o => o.status !== 'pendente');
-
-  // Verificação de integridade — todos os IDs devem estar preservados
-  const idsPendentes    = new Set(pendentes.map(o => o.id));
-  const idsParaArquivar = new Set(paraArquivar.map(o => o.id));
-  const idsTotais       = new Set(ordens.map(o => o.id));
-  const idsUnidos       = new Set([...idsPendentes, ...idsParaArquivar]);
-  if (idsUnidos.size !== idsTotais.size) {
-    toast('⚠️ Erro de integridade — virada cancelada. Contate o suporte.', true);
-    console.error('[SC] virarMes: IDs inconsistentes!', { totalAntes, pendentes: pendentes.length, paraArquivar: paraArquivar.length });
-    return;
-  }
-
-  // Arquivar aprovadas + recusadas/canceladas no histórico
-  if (paraArquivar.length > 0) {
-    const arquivo = {
-      mesKey: mesEncerrado,
-      ordens: paraArquivar,
-      arquivadoEm: new Date().toISOString()
-    };
-    historico.push(arquivo);
-  }
-
-  // Avançar o mês do sistema
-  const [ano, mes] = mesEncerrado.split('-').map(Number);
-  let nm = mes + 1, na = ano;
-  if (nm > 12) { nm = 1; na++; }
-  mesAtual = na + '-' + String(nm).padStart(2, '0');
-
-  // Pendentes FICAM em ordens[] — apenas atualiza o campo mes para rastreabilidade
-  // O campo o.mes original (mês de criação) é preservado no objeto arquivado
-  // Aqui mantemos o mes original para mostrar tag "Origem: Mês/Ano" na UI
-  ordens = pendentes; // mantém o mes original da OS (não sobrescreve)
-
-  // Log de auditoria salvo no localStorage
-  const logKey = 'sc_log_virada';
-  const logAnt = JSON.parse(localStorage.getItem(logKey) || '[]');
-  logAnt.push({
-    em: new Date().toISOString(),
-    mesEncerrado,
-    mesNovo: mesAtual,
-    arquivadas: paraArquivar.length,
-    pendentesMantidasIds: pendentes.map(o => o.numero)
-  });
-  localStorage.setItem(logKey, JSON.stringify(logAnt.slice(-20))); // guarda últimas 20 viradas
-
-  salvarLocal(); fecharModal('modal-virar');
+  // Virada de mês automática — função legada mantida para compatibilidade com backups antigos
+  mesAtual = getMesKey();
   document.getElementById('hmes').textContent = getMesLabel(mesAtual);
-  rendHist(); rendHistoricoCompleto(); updStats(); rendFaturamento();
-
-  const txtPend = pendentes.length > 0
-    ? ` (${pendentes.length} OS pendente${pendentes.length > 1 ? 's' : ''} mantida${pendentes.length > 1 ? 's' : ''})`
-    : '';
-  toast('✅ Mês virado! Agora: ' + getMesLabel(mesAtual) + txtPend);
+  rendHist(); updStats(); rendFaturamento();
+  toast('✅ Sistema sincronizado com o mês atual: ' + getMesLabel(mesAtual));
 }
 function buildReatCard(r,agora){
   const d=Math.floor((agora-r.data)/(24*60*60*1000));
@@ -2924,7 +2945,7 @@ function duplicarOS(id){
     status:'pendente',
     dataCriacao:new Date().toISOString(),
     dataFechamento:undefined,
-    mes:mesAtual,
+    mes:getMesKey(),
     dataOrc:hoje(),
     dataServico:undefined,
     horaServico:undefined,
@@ -3085,14 +3106,10 @@ function irParaNovoCliente(){
   },100);
 }
 function irParaOSPendentes(){
-  mudarTab('hist');
-  const btnPend=Array.from(document.querySelectorAll('.filtro-btn')).find(b=>b.textContent.includes('Pendentes'));
-  if(btnPend)setFiltroMes('pendente',btnPend);
+  mudarTab('hist'); // Orçamentos já só mostra pendentes
 }
 function irParaAprovadas(){
-  mudarTab('hist');
-  const btnAprov=Array.from(document.querySelectorAll('.filtro-btn')).find(b=>b.textContent.includes('Aprovados'));
-  if(btnAprov)setFiltroMes('aprovado',btnAprov);
+  mudarTab('historico'); // Aprovadas ficam no Histórico
 }
 function irParaAgendaAmanha(){
   const d=new Date();d.setDate(d.getDate()+1);
@@ -3198,7 +3215,7 @@ function updStatus(id,s){
     // Se já tem data/hora salva, aprovar direto
     if(os.dataServico&&os.horaServico){
       os.status='aprovado';
-      os.mes=mesAtual; // garante que conta no faturamento do mês correto
+      os.mes=getMesKey(); // mês real do fechamento
       os.dataFechamento=new Date().toISOString();
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
       criarAgendamento(os,os.dataServico,os.horaServico);
@@ -3214,10 +3231,12 @@ function updStatus(id,s){
       const horaAg=document.getElementById('modal-aprovar-hora').value;
       if(!dataAg||!horaAg){toast('⚠️ Informe a data e horário do serviço.',true);return;}
       os.status='aprovado';
-      os.mes=mesAtual; // garante que conta no faturamento do mês correto
+      os.mes=getMesKey(); // mês real do fechamento
       os.dataFechamento=new Date().toISOString();
       os.dataServico=dataAg;
       os.horaServico=horaAg;
+      const pgtoEl=document.getElementById('modal-aprovar-pgto');
+      if(pgtoEl&&pgtoEl.value)os.formaPgto=pgtoEl.value;
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
       criarAgendamento(os,dataAg,horaAg);
       salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
@@ -3285,7 +3304,7 @@ function getDadosCompletos() {
     agendamentos,
     tipos,
     precos,
-    mesAtual,
+    mesAtual: getMesKey(), // sempre o mês real
     osCounter,
     meta: window._sc ? window._sc.meta : 0
   };
@@ -3504,7 +3523,7 @@ function processarImport(input) {
           agendamentos = dados.agendamentos || [];
           tipos        = dados.tipos || TIPOS_DEFAULT;
           precos       = dados.precos || {};
-          mesAtual     = dados.mesAtual || getMesKey();
+          mesAtual     = getMesKey(); // sempre o mês real ao restaurar
           osCounter    = dados.osCounter || 0;
           if (dados.meta) window._sc.meta = dados.meta;
           salvarLocal(true);
@@ -3525,46 +3544,13 @@ function processarImport(input) {
 
 // ---- BACKUP AUTOMÁTICO SEMANAL ----
 function verificarMesNovo() {
-  const mesHoje = getMesKey(); // YYYY-MM do dia de hoje
-  // Se o mês do sistema é diferente do mês atual = virada de mês
-  if (!mesAtual || mesAtual === mesHoje) return;
-
-  // Verificar se já avisou hoje E o usuário já confirmou (não só viu o aviso)
-  const jaConfirmou = localStorage.getItem('sc_aviso_mes') === mesHoje;
-  if (jaConfirmou) return;
-
-  // Contar OS pendentes do mês anterior para informar
-  const osPendentes = ordens.filter(o => o.status === 'pendente').length;
-  const osTotal = ordens.length;
-  const [ano, mes] = mesAtual.split('-');
-  const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  const nomeMesAnt = meses[parseInt(mes)-1] + '/' + ano;
-  const nomeMesNovo = meses[parseInt(mesHoje.split('-')[1])-1] + '/' + mesHoje.split('-')[0];
-
-  let msg = `Você está em ${nomeMesNovo}, mas o sistema ainda está em ${nomeMesAnt}.`;
-  if (osTotal > 0) {
-    msg += `\n\n📋 ${nomeMesAnt} tem ${osTotal} OS:`;
-    const aprov = ordens.filter(o=>o.status==='aprovado').length;
-    const recus = ordens.filter(o=>o.status==='recusado'||o.status==='cancelado').length;
-    if (aprov)   msg += `\n  🟢 ${aprov} aprovada${aprov!==1?'s':''} (serão arquivadas)`;
-    if (recus)   msg += `\n  🔴 ${recus} recusada/cancelada${recus!==1?'s':''} (serão arquivadas)`;
-    if (osPendentes) msg += `\n  🟡 ${osPendentes} pendente${osPendentes!==1?'s':''} (permanecem abertas)`;
+  // Mês é automático — apenas garantir que mesAtual está atualizado
+  const mesHoje = getMesKey();
+  if (mesAtual !== mesHoje) {
+    mesAtual = mesHoje;
+    document.getElementById('hmes').textContent = getMesLabel(mesAtual);
+    rendHist(); updStats(); rendFaturamento();
   }
-  msg += '\n\nDeseja virar o mês agora?';
-
-  confirmar(
-    `📅 Novo Mês — ${nomeMesNovo}`,
-    msg,
-    '🔄 Virar Mês Agora',
-    'btn-g',
-    () => {
-      virarMes();
-      // Só marca como "confirmado" quando o usuário realmente virou o mês
-      localStorage.setItem('sc_aviso_mes', mesHoje);
-    }
-  );
-  // NÃO marcar como avisado aqui — se o usuário cancelar, pergunta de novo na próxima abertura
-  // (assim as OS pendentes nunca ficam presas no mês errado sem o usuário saber)
 }
 
 function verificarBackupAutomatico() {
