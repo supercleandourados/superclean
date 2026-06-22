@@ -510,21 +510,59 @@ select option{background:#0a1e38;}
       <button class="btn btn-o" onclick="agendaHoje()" style="font-size:12px;padding:7px 14px;">Hoje</button>
     </div>
 
-    <!-- Indicadores -->
+    <!-- Indicadores compactos -->
     <div class="agenda-indicadores">
       <div class="ag-ind"><div class="ag-dot dot-conf"></div><span id="ag-ct-conf">0 confirmados</span></div>
       <div class="ag-ind"><div class="ag-dot dot-pend"></div><span id="ag-ct-pend">0 pendentes</span></div>
       <div class="ag-ind"><div class="ag-dot dot-canc"></div><span id="ag-ct-canc">0 cancelados</span></div>
     </div>
 
-    <!-- Resumo financeiro da agenda -->
-    <div class="agenda-resumo">
-      <div class="ag-res-card"><div class="ag-res-label">Total de serviços</div><div class="ag-res-val" id="ag-total-srv">0</div></div>
-      <div class="ag-res-card"><div class="ag-res-label">Valor total</div><div class="ag-res-val" id="ag-total-val">R$ 0,00</div></div>
-      <div class="ag-res-card"><div class="ag-res-label">Confirmados</div><div class="ag-res-val conf" id="ag-conf-val">R$ 0,00</div></div>
-      <div class="ag-res-card"><div class="ag-res-label">Pendentes</div><div class="ag-res-val pend" id="ag-pend-val">R$ 0,00</div></div>
-      <div class="ag-res-card"><div class="ag-res-label">Cancelados</div><div class="ag-res-val canc" id="ag-canc-val">R$ 0,00</div></div>
-      <div class="ag-res-card"><div class="ag-res-label">Ticket médio</div><div class="ag-res-val" id="ag-ticket">R$ 0,00</div></div>
+    <!-- Resumo financeiro estilo CERA — confirmados vs pendentes em destaque -->
+    <div style="background:rgba(13,31,60,.75);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;">
+      <div style="font-size:11px;font-weight:700;color:var(--sky);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">📊 Resumo da Agenda</div>
+
+      <!-- Linha principal: Total e Ticket -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+        <div style="background:rgba(27,111,216,.1);border:1px solid rgba(27,111,216,.25);border-radius:10px;padding:12px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Total de serviços</div>
+          <div style="font-size:22px;font-weight:800;color:#fff;" id="ag-total-srv">0</div>
+          <div style="font-size:13px;font-weight:700;color:var(--sky);margin-top:2px;" id="ag-total-val">R$ 0,00</div>
+        </div>
+        <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Ticket médio</div>
+          <div style="font-size:18px;font-weight:800;color:#fff;" id="ag-ticket">R$ 0,00</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">por agendamento</div>
+        </div>
+      </div>
+
+      <!-- Confirmados e Pendentes em destaque (igual ao CERA) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div style="background:rgba(76,175,34,.1);border:1px solid rgba(76,175,34,.3);border-radius:10px;padding:12px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--green);"></div>
+            <span style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;">Confirmados</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);" id="ag-ct-conf-n">0 serviços</div>
+          <div style="font-size:20px;font-weight:800;color:var(--green);margin-top:4px;" id="ag-conf-val">R$ 0,00</div>
+        </div>
+        <div style="background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.3);border-radius:10px;padding:12px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--orange);"></div>
+            <span style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;">Pendentes</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);" id="ag-ct-pend-n">0 serviços</div>
+          <div style="font-size:20px;font-weight:800;color:var(--orange);margin-top:4px;" id="ag-pend-val">R$ 0,00</div>
+        </div>
+      </div>
+
+      <!-- Cancelados menor -->
+      <div style="background:rgba(100,100,100,.08);border:1px solid rgba(100,100,100,.2);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#aaa;"></div>
+          <span style="font-size:12px;color:var(--muted);" id="ag-ct-canc">0 cancelados</span>
+        </div>
+        <span style="font-size:13px;font-weight:700;color:#aaa;" id="ag-canc-val">R$ 0,00</span>
+      </div>
     </div>
 
     <!-- CALENDÁRIO -->
@@ -2169,10 +2207,6 @@ function rendAgenda(){
   const conf=agsMes.filter(a=>a.status==='confirmado');
   const pend=agsMes.filter(a=>a.status==='pendente');
   const canc=agsMes.filter(a=>a.status==='cancelado');
-  document.getElementById('ag-ct-conf').textContent=conf.length+' confirmado'+(conf.length!==1?'s':'');
-  document.getElementById('ag-ct-pend').textContent=pend.length+' pendente'+(pend.length!==1?'s':'');
-  document.getElementById('ag-ct-canc').textContent=canc.length+' cancelado'+(canc.length!==1?'s':'');
-
   // Resumo financeiro
   const totalV=agsMes.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
   const confV=conf.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
@@ -2184,6 +2218,15 @@ function rendAgenda(){
   document.getElementById('ag-pend-val').textContent=fmtMoeda(pendV);
   document.getElementById('ag-canc-val').textContent=fmtMoeda(cancV);
   document.getElementById('ag-ticket').textContent=agsMes.length?fmtMoeda(totalV/agsMes.length):'R$ 0,00';
+  // Atualizar contadores dos novos cards de confirmados/pendentes
+  const elConfN=document.getElementById('ag-ct-conf-n');
+  const elPendN=document.getElementById('ag-ct-pend-n');
+  if(elConfN)elConfN.textContent=conf.length+' serviço'+(conf.length!==1?'s':'');
+  if(elPendN)elPendN.textContent=pend.length+' serviço'+(pend.length!==1?'s':'');
+  // Manter indicadores compactos do topo também atualizados
+  document.getElementById('ag-ct-conf').textContent=conf.length+' confirmado'+(conf.length!==1?'s':'');
+  document.getElementById('ag-ct-pend').textContent=pend.length+' pendente'+(pend.length!==1?'s':'');
+  document.getElementById('ag-ct-canc').textContent=canc.length+' cancelado'+(canc.length!==1?'s':'');
 
   // Calendário
   rendCalendario(agendaAno,agendaMes,agsMes);
