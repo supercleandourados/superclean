@@ -227,6 +227,9 @@ select option{background:#0a1e38;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:90%;max-width:520px;max-height:90vh;overflow-y:auto;}
 .modal-title{font-family:'DM Sans',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:20px;}
+/* LEMBRETE WPP */
+.btn-lembrete-wpp{padding:6px 12px;border-radius:8px;border:1px solid rgba(37,211,102,0.4);background:rgba(37,211,102,0.1);color:#25D366;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap;}
+.btn-lembrete-wpp:active{background:rgba(37,211,102,0.25);}
 /* TIPOS EDITÁVEIS */
 .tipo-tag{display:inline-flex;align-items:center;gap:5px;background:rgba(27,111,216,.15);border:1px solid rgba(27,111,216,.3);border-radius:20px;padding:4px 10px;font-size:12px;margin:3px;cursor:default;}
 .tipo-tag button{background:none;border:none;color:#ff6b6b;cursor:pointer;font-size:12px;line-height:1;}
@@ -358,6 +361,11 @@ select option{background:#0a1e38;}
     <div class="home-saudacao">
       <div class="saud-titulo" id="home-saud-titulo">Bom dia, <span>Super Clean!</span> ☀️</div>
       <div class="saud-sub" id="home-saud-sub">Carregando...</div>
+    </div>
+
+    <!-- Banner lembretes amanhã -->
+    <div id="banner-lembretes-amanha"
+      style="display:none;align-items:center;justify-content:space-between;background:rgba(37,211,102,0.1);border:1px solid rgba(37,211,102,0.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#fff;">
     </div>
 
     <!-- Botões de atalho -->
@@ -984,6 +992,34 @@ select option{background:#0a1e38;}
     <div class="brow">
       <button class="btn btn-o" onclick="fecharModal('modal-remarcar')" style="flex:1;">Cancelar</button>
       <button class="btn btn-g" id="modal-remarcar-ok" style="flex:1;">✅ Remarcar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL LEMBRETE WPP -->
+<div id="modal-lembrete-wpp" class="modal-overlay">
+  <div class="modal" style="max-width:420px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="modal-title" style="margin-bottom:0;">📲 Lembrete de Confirmação</div>
+      <button onclick="fecharModal('modal-lembrete-wpp')" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:0 4px;">✕</button>
+    </div>
+    <div id="lembrete-wpp-info" style="font-size:13px;font-weight:700;color:var(--sky);margin-bottom:12px;"></div>
+    <label style="font-size:12px;color:var(--muted);margin-bottom:6px;display:block;">Mensagem (editável antes de enviar):</label>
+    <textarea
+      id="lembrete-wpp-texto"
+      style="width:100%;min-height:260px;padding:12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:#fff;font-size:12px;line-height:1.6;resize:vertical;font-family:inherit;"
+    ></textarea>
+    <div class="brow" style="margin-top:14px;">
+      <button
+        onclick="enviarLembreteWpp()"
+        class="btn btn-wpp" style="flex:1;padding:14px;font-size:14px;font-weight:700;">
+        📲 Enviar WhatsApp
+      </button>
+      <button
+        onclick="fecharModal('modal-lembrete-wpp')"
+        class="btn btn-o" style="padding:14px 18px;">
+        Fechar
+      </button>
     </div>
   </div>
 </div>
@@ -2401,6 +2437,9 @@ function buildAgCard(ag,noModal){
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
       <button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>
       <button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="remarcarAg('${ag.id}')">📅 Remarcar</button>
+      ${ag.status!=='cancelado'&&(ag.cliWpp||'').replace(/\D/g,'').length>=10
+        ?`<button class="btn-lembrete-wpp" onclick="lembreteWpp('${ag.id}')">📲 Lembrete</button>`
+        :''}
       ${ag.status!=='cancelado'
         ?`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="cancelarAg('${ag.id}')">❌ Cancelar</button>`
         :`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="excluirAg('${ag.id}')">🗑️ Excluir</button>`}
@@ -2909,6 +2948,9 @@ function rendHome(){
   homeCalAno=new Date().getFullYear();
   homeCalMes=new Date().getMonth();
   rendCalendarioHome();
+
+  // Banner lembretes amanhã
+  verificarLembretesAmanha();
 }
 function enviarOrcamentoWpp(){
   if(!osCompartilhar)return;
@@ -3621,6 +3663,87 @@ function atualizarStatusBackup() {
     if (elBadge) { elBadge.textContent = '✅ OK'; elBadge.style.background='rgba(76,175,34,.2)'; elBadge.style.color='var(--green)'; }
     if (elDias) elDias.textContent = diasRestantes === 0 ? 'hoje' : `${diasRestantes} dia${diasRestantes !== 1 ? 's' : ''}`;
     if (elProg) elProg.style.background = 'linear-gradient(90deg,var(--blue),var(--sky))';
+  }
+}
+
+// ---- LEMBRETE DE CONFIRMAÇÃO VIA WHATSAPP ----
+function lembreteWpp(agId) {
+  const ag = agendamentos.find(a => a.id === agId);
+  if (!ag) return;
+
+  const wpp = (ag.cliWpp || '').replace(/\D/g, '');
+  const dataFmt = fmtData(ag.data);
+  const hora = ag.hora || '08:00';
+  const nome = ag.cliNome || 'cliente';
+  const servico = ag.servico || 'higienização';
+  const valor = ag.valor ? fmtMoeda(ag.valor) : '';
+
+  const msg =
+`Olá, ${nome}! 😊
+
+Estamos passando para *confirmar seu atendimento* agendado para *amanhã*! ✅
+
+📅 Data: ${dataFmt}
+🕐 Horário: ${hora}h
+🧹 Serviço: ${servico}${valor ? '\n💰 Valor: ' + valor : ''}
+
+Para garantir seu horário, pedimos que responda *CONFIRMADO* nesta mensagem. ✅
+
+Caso não possa comparecer, nos avise com antecedência para que possamos reorganizar a agenda.
+
+Agradecemos pela preferência! 🙏
+*Super Clean Higienização* — (67) 99225-3296`;
+
+  window._agLembrete = { wpp, msg };
+
+  const ta = document.getElementById('lembrete-wpp-texto');
+  if (ta) ta.value = msg;
+
+  const infoEl = document.getElementById('lembrete-wpp-info');
+  if (infoEl) infoEl.textContent = nome + ' · ' + dataFmt + ' às ' + hora + 'h';
+
+  abrirModal('modal-lembrete-wpp');
+}
+
+function enviarLembreteWpp() {
+  const dados = window._agLembrete;
+  if (!dados) return;
+  const ta = document.getElementById('lembrete-wpp-texto');
+  const msg = ta ? ta.value : dados.msg;
+  const f = dados.wpp;
+  const url = f
+    ? `https://wa.me/55${f}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+  fecharModal('modal-lembrete-wpp');
+  toast('📲 WhatsApp aberto para ' + (document.getElementById('lembrete-wpp-info')?.textContent?.split('·')[0]?.trim() || 'cliente'));
+}
+
+function verificarLembretesAmanha() {
+  const amanha = new Date();
+  amanha.setDate(amanha.getDate() + 1);
+  const amanhaStr = amanha.toISOString().split('T')[0];
+
+  const agsAmanha = agendamentos.filter(a =>
+    a.data === amanhaStr &&
+    a.status !== 'cancelado' &&
+    (a.cliWpp || '').replace(/\D/g, '').length >= 10
+  );
+
+  const bannerEl = document.getElementById('banner-lembretes-amanha');
+  if (!bannerEl) return;
+
+  if (agsAmanha.length > 0) {
+    const plural = agsAmanha.length > 1
+      ? `${agsAmanha.length} agendamentos amanhã`
+      : `1 agendamento amanhã`;
+    bannerEl.innerHTML = `
+      <span>📲 <strong>${plural}</strong> — envie o lembrete de confirmação!</span>
+      <button onclick="mudarTab('agenda')" style="padding:4px 10px;border-radius:6px;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:11px;font-weight:600;cursor:pointer;margin-left:8px;">Ver agenda →</button>
+    `;
+    bannerEl.style.display = 'flex';
+  } else {
+    bannerEl.style.display = 'none';
   }
 }
 
