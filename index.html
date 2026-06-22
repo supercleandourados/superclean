@@ -438,82 +438,59 @@ select option{background:#0a1e38;}
     </div>
   </div>
   <div id="tab-nova-os" class="tbc">
-    <div class="g2">
-      <div>
-        <div class="card">
-          <div class="ctitle">📋 Nova Ordem de Serviço</div>
-          <div class="os-badge" id="os-num-badge">OS #0001</div>
+    <div class="card">
+      <div class="ctitle">📋 Nova Ordem de Serviço</div>
+      <div class="os-badge" id="os-num-badge">OS #0001</div>
 
-          <div class="field autocomplete" id="ac-wrap">
-            <label>Cliente *</label>
-            <input type="text" id="cli-input" placeholder="Digite nome ou telefone..." oninput="debounceBusca(this.value)" autocomplete="off">
-            <div class="ac-list" id="ac-list"></div>
-          </div>
-          <div id="cli-selecionado" style="display:none;margin-bottom:12px;">
-            <div style="background:rgba(76,175,34,.1);border:1px solid rgba(76,175,34,.3);border-radius:8px;padding:10px 14px;font-size:13px;">
-              <div style="font-weight:600;color:#fff;" id="cli-sel-nome"></div>
-              <div style="color:var(--muted);margin-top:2px;" id="cli-sel-info"></div>
-              <button onclick="limparCliente()" style="background:none;border:none;color:#ff6b6b;font-size:11px;cursor:pointer;margin-top:4px;">✕ Trocar cliente</button>
-            </div>
-          </div>
-
-          <div class="field">
-            <label>Data do Orçamento</label>
-            <input type="date" id="data-orc">
-          </div>
-
-          <div class="field">
-            <label>Observações</label>
-            <textarea id="obs" rows="2" placeholder="Observações opcionais..."></textarea>
-          </div>
-        </div>
-
-        <div class="card" style="margin-top:16px;">
-          <div class="ctitle">🛋️ Serviços</div>
-          <div id="items-list"></div>
-          <button class="btn btn-o" onclick="addItem()" style="width:100%;margin-top:4px;">+ Adicionar Item</button>
-          <div class="totais" id="totais-box" style="display:none">
-            <div class="tl"><span style="color:var(--muted);">Subtotal</span><span id="t-sub-show">R$ 0,00</span></div>
-            <div class="tl" style="margin:6px 0;">
-              <span style="color:var(--muted);font-size:12px;">Desconto</span>
-              <div style="display:flex;align-items:center;gap:6px;">
-                <input type="text" id="t-desc-val" value="0" inputmode="numeric" style="width:70px;text-align:right;padding:4px 8px;font-size:13px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;color:#fff;" oninput="calcTotais()">
-                <select id="t-desc-tipo" style="padding:4px 6px;font-size:12px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;color:var(--muted);" onchange="calcTotais()">
-                  <option value="R$">R$</option>
-                  <option value="%">%</option>
-                </select>
-              </div>
-            </div>
-            <div class="tl dest"><span>Total</span><span id="t-total">R$ 0,00</span></div>
-          </div>
-          <button class="btn btn-p" onclick="salvarOS()">💾 Salvar Orçamento</button>
+      <div class="field autocomplete" id="ac-wrap">
+        <label>Cliente *</label>
+        <input type="text" id="cli-input" placeholder="Digite nome ou telefone..." oninput="debounceBusca(this.value)" autocomplete="off">
+        <div class="ac-list" id="ac-list"></div>
+      </div>
+      <div id="cli-selecionado" style="display:none;margin-bottom:12px;">
+        <div style="background:rgba(76,175,34,.1);border:1px solid rgba(76,175,34,.3);border-radius:8px;padding:10px 14px;font-size:13px;">
+          <div style="font-weight:600;color:#fff;" id="cli-sel-nome"></div>
+          <div style="color:var(--muted);margin-top:2px;" id="cli-sel-info"></div>
+          <button onclick="limparCliente()" style="background:none;border:none;color:#ff6b6b;font-size:11px;cursor:pointer;margin-top:4px;">✕ Trocar cliente</button>
         </div>
       </div>
 
-      <div>
-        <div class="card">
-          <div class="ctitle">👤 Cadastrar Novo Cliente</div>
-          <div class="field">
-            <label>Nome *</label>
-            <input type="text" id="nc-nome" placeholder="Nome completo">
-          </div>
-          <div class="field">
-            <label>WhatsApp *</label>
-            <input type="text" id="nc-wpp" placeholder="(67) 99999-9999" oninput="fmtFone(this)">
-          </div>
-          <div class="field">
-            <label>Bairro / Endereço</label>
-            <input type="text" id="nc-end" placeholder="Bairro ou rua">
-          </div>
-          <button class="btn btn-g" style="width:100%" onclick="salvarCliente()">✅ Cadastrar Cliente</button>
-        </div>
-
-        <!-- PRÓXIMOS AGENDAMENTOS NO PAINEL OS -->
-        <div class="dash-next" style="margin-top:0;">
-          <div class="dash-next-title">📅 Próximos Serviços</div>
-          <div id="prox-servicos"><div class="empty" style="padding:12px 0;">Nenhum agendamento</div></div>
-        </div>
+      <div class="field">
+        <label>Data do Orçamento</label>
+        <input type="date" id="data-orc">
       </div>
+
+      <div class="field">
+        <label>Observações</label>
+        <textarea id="obs" rows="2" placeholder="Observações opcionais..."></textarea>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="ctitle">🛋️ Serviços</div>
+      <div id="items-list"></div>
+      <button class="btn btn-o" onclick="addItem()" style="width:100%;margin-top:4px;">+ Adicionar Item</button>
+      <div class="totais" id="totais-box" style="display:none">
+        <div class="tl"><span style="color:var(--muted);">Subtotal</span><span id="t-sub-show">R$ 0,00</span></div>
+        <div class="tl" style="margin:6px 0;">
+          <span style="color:var(--muted);font-size:12px;">Desconto</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <input type="text" id="t-desc-val" value="0" inputmode="numeric" style="width:70px;text-align:right;padding:4px 8px;font-size:13px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;color:#fff;" oninput="calcTotais()">
+            <select id="t-desc-tipo" style="padding:4px 6px;font-size:12px;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;color:var(--muted);" onchange="calcTotais()">
+              <option value="R$">R$</option>
+              <option value="%">%</option>
+            </select>
+          </div>
+        </div>
+        <div class="tl dest"><span>Total</span><span id="t-total">R$ 0,00</span></div>
+      </div>
+      <button class="btn btn-p" onclick="salvarOS()">💾 Salvar Orçamento</button>
+    </div>
+
+    <!-- PRÓXIMOS AGENDAMENTOS NO PAINEL OS -->
+    <div class="dash-next" style="margin-top:16px;">
+      <div class="dash-next-title">📅 Próximos Serviços</div>
+      <div id="prox-servicos"><div class="empty" style="padding:12px 0;">Nenhum agendamento</div></div>
     </div>
   </div>
   <div id="tab-agenda" class="tbc">
