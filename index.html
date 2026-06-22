@@ -1033,6 +1033,16 @@ onSnapshot(REF, (snap) => {
   const d = snap.data();
   if (!d) return;
   try {
+    // Proteção anti-perda: só aceitar dados da nuvem se forem mais recentes que o local
+    // Comparar pelo updatedAt — se o local for mais novo, ignorar este snapshot
+    const tsNuvem = d.updatedAt ? new Date(d.updatedAt).getTime() : 0;
+    const tsLocal = parseInt(localStorage.getItem('sc_local_ts') || '0');
+    // Se o local foi atualizado DEPOIS do snapshot da nuvem, não sobrescrever
+    if (_fbLoaded && tsLocal > tsNuvem + 2000) {
+      console.log('[SC] Snapshot ignorado — local mais recente:', new Date(tsLocal), '> nuvem:', new Date(tsNuvem));
+      return;
+    }
+
     if(d.ordens)       { window._sc.ordens       = JSON.parse(d.ordens);       localStorage.setItem('sc_ordens',     d.ordens); }
     if(d.historico)    { window._sc.historico    = JSON.parse(d.historico);    localStorage.setItem('sc_historico',  d.historico); }
     if(d.agendamentos) { window._sc.agendamentos = JSON.parse(d.agendamentos); localStorage.setItem('sc_agenda',     d.agendamentos); }
@@ -1054,14 +1064,27 @@ onSnapshot(REF, (snap) => {
 Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]) => {
   if (snap.exists()) {
     const d = snap.data();
-    if(d.ordens)       localStorage.setItem('sc_ordens',     d.ordens);
-    if(d.historico)    localStorage.setItem('sc_historico',  d.historico);
-    if(d.agendamentos) localStorage.setItem('sc_agenda',     d.agendamentos);
-    if(d.tipos)        localStorage.setItem('sc_tipos',      d.tipos);
-    if(d.precos)       localStorage.setItem('sc_precos',     d.precos);
-    if(d.mesAtual)     localStorage.setItem('sc_mes_atual',  d.mesAtual);
-    if(d.osCounter)    localStorage.setItem('sc_os_counter', d.osCounter);
-    if(d.meta)         localStorage.setItem('sc_meta',       d.meta);
+    // Proteção: comparar quantidade de OS local vs nuvem antes de sobrescrever
+    const ordensLocal = JSON.parse(localStorage.getItem('sc_ordens') || '[]');
+    const ordensNuvem = d.ordens ? JSON.parse(d.ordens) : [];
+    const tsLocal = parseInt(localStorage.getItem('sc_local_ts') || '0');
+    const tsNuvem = d.updatedAt ? new Date(d.updatedAt).getTime() : 0;
+    // Só usar dados da nuvem se: nuvem tem mais OS OU nuvem é mais recente que local
+    const usarNuvem = ordensNuvem.length > ordensLocal.length || tsNuvem > tsLocal;
+    if (usarNuvem) {
+      if(d.ordens)       localStorage.setItem('sc_ordens',     d.ordens);
+      if(d.historico)    localStorage.setItem('sc_historico',  d.historico);
+      if(d.agendamentos) localStorage.setItem('sc_agenda',     d.agendamentos);
+      if(d.tipos)        localStorage.setItem('sc_tipos',      d.tipos);
+      if(d.precos)       localStorage.setItem('sc_precos',     d.precos);
+      if(d.mesAtual)     localStorage.setItem('sc_mes_atual',  d.mesAtual);
+      if(d.osCounter)    localStorage.setItem('sc_os_counter', d.osCounter);
+      if(d.meta)         localStorage.setItem('sc_meta',       d.meta);
+    } else {
+      // Local é mais recente — re-publicar local para sincronizar a nuvem
+      console.log('[SC] Local mais recente que nuvem — re-sync em 2s');
+      setTimeout(() => { if (window.fbSalvar) window.fbSalvar(); }, 2000);
+    }
   }
   if (clientesFB && clientesFB.length > 0) {
     localStorage.setItem('sc_clientes', JSON.stringify(clientesFB));
@@ -1253,6 +1276,8 @@ function salvarLocal(clientesMudaram){
   localStorage.setItem('sc_precos',     JSON.stringify(precos));
   localStorage.setItem('sc_mes_atual',  mesAtual);
   localStorage.setItem('sc_os_counter', String(osCounter));
+  // Timestamp local para proteção anti-sobrescrita do Firebase
+  localStorage.setItem('sc_local_ts',   String(Date.now()));
   // Salvar dados operacionais sempre
   if (window.fbSalvar) window.fbSalvar();
   // Salvar clientes na coleção separada só quando mudam
@@ -3399,9 +3424,9 @@ function verificarMesNovo() {
   // Se o mês do sistema é diferente do mês atual = virada de mês
   if (!mesAtual || mesAtual === mesHoje) return;
 
-  // Verificar se já avisou hoje (evitar repetir a cada reload)
-  const jaAvisouHoje = localStorage.getItem('sc_aviso_mes') === mesHoje;
-  if (jaAvisouHoje) return;
+  // Verificar se já avisou hoje E o usuário já confirmou (não só viu o aviso)
+  const jaConfirmou = localStorage.getItem('sc_aviso_mes') === mesHoje;
+  if (jaConfirmou) return;
 
   // Contar OS pendentes do mês anterior para informar
   const osPendentes = ordens.filter(o => o.status === 'pendente').length;
@@ -3429,13 +3454,12 @@ function verificarMesNovo() {
     'btn-g',
     () => {
       virarMes();
+      // Só marca como "confirmado" quando o usuário realmente virou o mês
       localStorage.setItem('sc_aviso_mes', mesHoje);
     }
   );
-
-  // Registrar que já avisou hoje independente da escolha
-  // (se o usuário cancelar, não pergunta de novo até amanhã)
-  localStorage.setItem('sc_aviso_mes', mesHoje);
+  // NÃO marcar como avisado aqui — se o usuário cancelar, pergunta de novo na próxima abertura
+  // (assim as OS pendentes nunca ficam presas no mês errado sem o usuário saber)
 }
 
 function verificarBackupAutomatico() {
