@@ -2086,6 +2086,11 @@ function renderOS(o,comActions){
   const sc={pendente:'sp',aprovado:'sf',recusado:'sr',cancelado:'st-canc'}[o.status]||'sp';
   const dt=new Date(o.dataCriacao).toLocaleDateString('pt-BR');
   const res=o.itens.map(i=>(i.qtd>1?i.qtd+'× ':'')+i.tipo+' ('+i.srvNome+')').join(', ');
+  // Tag de mês de origem — aparece quando a OS é de mês anterior (pendente arrastada)
+  const mesDaOS = o.mes || mesAtual;
+  const tagOrigem = (mesDaOS !== mesAtual)
+    ? `<span style="font-size:10px;background:rgba(255,140,0,.18);color:var(--orange);border:1px solid rgba(255,140,0,.35);border-radius:5px;padding:2px 7px;white-space:nowrap;">📌 Origem: ${getMesLabel(mesDaOS)}</span>`
+    : '';
   let actions='';
   if(comActions){
     actions=`<div class="brow-os">
@@ -2109,7 +2114,9 @@ function renderOS(o,comActions){
       <span>📅 ${dt}</span>
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${res}</span>
       <span class="hst ${sc}">${o.status==='aprovado'?'🟢 Aprovada':o.status==='recusado'?'🔴 Recusada':o.status==='cancelado'?'⚫ Cancelada':'🟡 Pendente'}</span>
-    </div>${actions}</div>`;
+    </div>
+    ${tagOrigem ? `<div style="margin-top:5px;">${tagOrigem}</div>` : ''}
+    ${actions}</div>`;
 }
 
 let _histPage=20;
@@ -2431,39 +2438,82 @@ function confirmarVirarMes(){
   const [ano, mes]  = mesAtual.split('-');
   const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const nomeMes = meses[parseInt(mes)-1]+'/'+ano;
+  const total = ordens.length;
 
   const el = document.getElementById('modal-virar-resumo');
   if (el) {
     el.innerHTML = `
-      <strong style="color:#fff;">Resumo de ${nomeMes}:</strong><br><br>
-      🟢 ${aprovadas.length} OS aprovada${aprovadas.length!==1?'s':''} — serão <strong style="color:#fff">arquivadas</strong><br>
-      🔴 ${recusadas.length} OS recusada/cancelada${recusadas.length!==1?'s':''} — serão <strong style="color:#fff">arquivadas</strong><br>
-      ${pendentes.length > 0
-        ? `🟡 ${pendentes.length} OS pendente${pendentes.length!==1?'s':''} — <strong style="color:#ffc800">permanecem abertas</strong> no novo mês<br>`
-        : ''}
-      <br>Clientes, agendamentos e configurações são mantidos.`;
+      <strong style="color:#fff;">Resumo de ${nomeMes} (${total} OS no total):</strong><br><br>
+      🟢 ${aprovadas.length} aprovada${aprovadas.length!==1?'s':''} → <strong style="color:#fff;">arquivadas no histórico</strong><br>
+      🔴 ${recusadas.length} recusada/cancelada${recusadas.length!==1?'s':''} → <strong style="color:#fff;">arquivadas no histórico</strong><br>
+      🟡 ${pendentes.length} pendente${pendentes.length!==1?'s':''} → <strong style="color:#ffc800;">permanecem abertas (não somem)</strong><br>
+      <br>
+      <div style="background:rgba(76,175,34,.08);border:1px solid rgba(76,175,34,.2);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--muted);line-height:1.6;">
+        ✅ Nenhuma OS é apagada.<br>
+        ✅ Pendentes ficam visíveis em Orçamentos com a tag do mês de origem.<br>
+        ✅ Aprovadas e recusadas ficam acessíveis em 🗂️ Histórico.
+      </div>`;
   }
   abrirModal('modal-virar');
 }
 function virarMes(){
-  // Separar: pendentes ficam no mês atual, fechadas/recusadas/canceladas vão pro histórico
-  const paraArquivar = ordens.filter(o => o.status !== 'pendente');
-  const pendentes    = ordens.filter(o => o.status === 'pendente');
+  // ── REGRA DE NEGÓCIO (NUNCA ALTERAR) ──────────────────────────────────────
+  // • Pendentes  → permanecem em ordens[], NÃO vão pro histórico, JAMAIS somem
+  // • Aprovadas  → vão pro historico[] do mês encerrado
+  // • Recusadas/Canceladas → vão pro historico[] do mês encerrado
+  // • Nenhuma OS pode ser apagada ou perder dados ao virar o mês
+  // ──────────────────────────────────────────────────────────────────────────
 
-  // Só arquiva se tiver algo para arquivar
+  // Snapshot de segurança ANTES de qualquer alteração
+  const totalAntes = ordens.length;
+  const mesEncerrado = mesAtual;
+
+  const pendentes    = ordens.filter(o => o.status === 'pendente');
+  const paraArquivar = ordens.filter(o => o.status !== 'pendente');
+
+  // Verificação de integridade — todos os IDs devem estar preservados
+  const idsPendentes    = new Set(pendentes.map(o => o.id));
+  const idsParaArquivar = new Set(paraArquivar.map(o => o.id));
+  const idsTotais       = new Set(ordens.map(o => o.id));
+  const idsUnidos       = new Set([...idsPendentes, ...idsParaArquivar]);
+  if (idsUnidos.size !== idsTotais.size) {
+    toast('⚠️ Erro de integridade — virada cancelada. Contate o suporte.', true);
+    console.error('[SC] virarMes: IDs inconsistentes!', { totalAntes, pendentes: pendentes.length, paraArquivar: paraArquivar.length });
+    return;
+  }
+
+  // Arquivar aprovadas + recusadas/canceladas no histórico
   if (paraArquivar.length > 0) {
-    const arquivo = { mesKey: mesAtual, ordens: paraArquivar, arquivadoEm: new Date().toISOString() };
+    const arquivo = {
+      mesKey: mesEncerrado,
+      ordens: paraArquivar,
+      arquivadoEm: new Date().toISOString()
+    };
     historico.push(arquivo);
   }
 
-  // Avançar o mês
-  const [ano, mes] = mesAtual.split('-').map(Number);
+  // Avançar o mês do sistema
+  const [ano, mes] = mesEncerrado.split('-').map(Number);
   let nm = mes + 1, na = ano;
   if (nm > 12) { nm = 1; na++; }
   mesAtual = na + '-' + String(nm).padStart(2, '0');
 
-  // Manter pendentes no novo mês (com o novo mesAtual)
-  ordens = pendentes.map(o => ({ ...o, mes: mesAtual }));
+  // Pendentes FICAM em ordens[] — apenas atualiza o campo mes para rastreabilidade
+  // O campo o.mes original (mês de criação) é preservado no objeto arquivado
+  // Aqui mantemos o mes original para mostrar tag "Origem: Mês/Ano" na UI
+  ordens = pendentes; // mantém o mes original da OS (não sobrescreve)
+
+  // Log de auditoria salvo no localStorage
+  const logKey = 'sc_log_virada';
+  const logAnt = JSON.parse(localStorage.getItem(logKey) || '[]');
+  logAnt.push({
+    em: new Date().toISOString(),
+    mesEncerrado,
+    mesNovo: mesAtual,
+    arquivadas: paraArquivar.length,
+    pendentesMantidasIds: pendentes.map(o => o.numero)
+  });
+  localStorage.setItem(logKey, JSON.stringify(logAnt.slice(-20))); // guarda últimas 20 viradas
 
   salvarLocal(); fecharModal('modal-virar');
   document.getElementById('hmes').textContent = getMesLabel(mesAtual);
