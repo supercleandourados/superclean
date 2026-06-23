@@ -354,7 +354,6 @@ select option{background:#0a1e38;}
     <button class="tab" onclick="mudarTab('agenda')">📅 Agenda</button>
     <button class="tab" onclick="mudarTab('faturamento')">💰 Financeiro</button>
     <button class="tab" onclick="mudarTab('clientes')">👥 Clientes</button>
-    <button class="tab" onclick="mudarTab('historico')">🗂️ Histórico</button>
     <button class="tab" id="tab-btn-reat" onclick="mudarTab('reat')">🔔 Reativar</button>
     <button class="tab" onclick="mudarTab('config')">⚙️ Config.</button>
   </div>
@@ -523,6 +522,9 @@ select option{background:#0a1e38;}
       </div>
       <button class="btn btn-o" onclick="agendaHoje()" style="font-size:12px;padding:7px 14px;">Hoje</button>
     </div>
+
+    <!-- Busca na agenda/histórico -->
+    <input type="text" id="agenda-busca" placeholder="🔍 Buscar por cliente ou nº OS neste mês..." oninput="rendAgenda()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
 
     <!-- Indicadores compactos -->
     <div class="agenda-indicadores">
@@ -770,10 +772,7 @@ select option{background:#0a1e38;}
     <input type="text" id="orc-busca" placeholder="🔍 Buscar por cliente ou nº OS..." oninput="rendHist()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
     <div id="lista-hist"></div>
   </div>
-  <div id="tab-historico" class="tbc">
-    <div class="modal-title-h">🗂️ Histórico Completo</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Todos os meses arquivados</div>
-    <input type="text" class="hist-busca" id="hist-busca" placeholder="🔍 Buscar cliente no histórico..." oninput="debounceRendHist()">
+  <div id="tab-historico" class="tbc" style="display:none!important;">
     <div id="lista-historico"></div>
   </div>
   <div id="tab-reat" class="tbc">
@@ -1276,7 +1275,6 @@ window.scRender = function() {
     else rendClientes();
   }
   else if(t==='reat')calcReativacao(false);
-  else if(t==='historico')rendHistoricoCompleto();
   else if(t==='config'){rendTipos();rendPrecosTabela();atualizarStatusBackup();}
   else if(t==='agenda')rendAgenda();
   else if(t==='faturamento')rendFaturamento();
@@ -2292,14 +2290,54 @@ function agendaHoje(){
 }
 function getAgsMes(ano,mes){
   const key=ano+'-'+String(mes+1).padStart(2,'0');
-  return agendamentos.filter(a=>a.data&&a.data.startsWith(key));
+  // Agendamentos reais do mês
+  const agReais=agendamentos.filter(a=>a.data&&a.data.startsWith(key));
+  // OS do array historico[] legado que pertencem a este mês — montar como agendamentos virtuais
+  const osIds=new Set(agReais.map(a=>a.osId));
+  const agVirtuais=[];
+  historico.flatMap(m=>m.ordens||[]).forEach(o=>{
+    if(osIds.has(o.id))return; // já tem agendamento real
+    // Usar dataServico ou dataFechamento para posicionar no calendário
+    const dataPos=o.dataServico||(o.dataFechamento?o.dataFechamento.slice(0,10):null)||(o.dataCriacao?o.dataCriacao.slice(0,10):null);
+    if(!dataPos||!dataPos.startsWith(key))return;
+    agVirtuais.push({
+      id:'virt_'+o.id,
+      osId:o.id,
+      osNum:o.numero,
+      cliId:o.cliId,
+      cliNome:o.cliNome,
+      cliWpp:o.cliWpp,
+      cliEnd:o.localServico||o.cliEnd||'',
+      data:dataPos,
+      hora:o.horaServico||'',
+      valor:o.total||0,
+      servico:o.itens?o.itens.map(i=>i.tipo+(i.srvNome?' ('+i.srvNome+')':'')).join(', '):'',
+      obs:o.obs||'',
+      formaPgto:o.formaPgto||'',
+      status:'confirmado',
+      _virtual:true
+    });
+  });
+  return [...agReais,...agVirtuais];
 }
 
 function rendAgenda(){
   rendCardHoje();
-  // Título
-  document.getElementById('agenda-mes-label').textContent=getMesNome(agendaMes)+' '+agendaAno;
-  const agsMes=getAgsMes(agendaAno,agendaMes);
+  // Título com indicação de histórico vs futuro
+  const mesAtualKey=getMesKey();
+  const mesVizKey=agendaAno+'-'+String(agendaMes+1).padStart(2,'0');
+  const ehPassado=mesVizKey<mesAtualKey;
+  const ehAtual=mesVizKey===mesAtualKey;
+  const labelExtra=ehPassado?' 📂 Histórico':ehAtual?' 📅 Atual':' 🔮 Futuro';
+  document.getElementById('agenda-mes-label').textContent=getMesNome(agendaMes)+' '+agendaAno+labelExtra;
+
+  const agsMesBrutos=getAgsMes(agendaAno,agendaMes);
+
+  // Aplicar busca se houver
+  const busca=(document.getElementById('agenda-busca')?.value||'').toLowerCase().trim();
+  const agsMes=busca
+    ? agsMesBrutos.filter(a=>a.cliNome?.toLowerCase().includes(busca)||String(a.osNum||'').includes(busca)||a.cliWpp?.includes(busca))
+    : agsMesBrutos;
 
   // Classificar por status real (baseado na OS)
   const todasOSMapa={};
@@ -2332,11 +2370,12 @@ function rendAgenda(){
   document.getElementById('ag-ct-pend').textContent=executados.length+' executado'+(executados.length!==1?'s':'');
   document.getElementById('ag-ct-canc').textContent=cancelados.length+' cancelado'+(cancelados.length!==1?'s':'');
 
-  // Calendário
-  rendCalendario(agendaAno,agendaMes,agsMes);
+  // Calendário (usa todos, sem filtro de busca, para não quebrar o visual)
+  rendCalendario(agendaAno,agendaMes,agsMesBrutos);
 
   // Lista do mês
-  rendListaAgenda(agsMes,'ag-lista-title','agenda-lista','Todos os serviços do mês');
+  const tituloLista=ehPassado?'Histórico — '+getMesNome(agendaMes)+'/'+agendaAno:'Serviços de '+getMesNome(agendaMes)+'/'+agendaAno;
+  rendListaAgenda(agsMes,'ag-lista-title','agenda-lista',tituloLista);
 }
 
 function rendCalendario(ano,mes,agsMes){
@@ -2413,7 +2452,24 @@ function today(){
 }
 
 function abrirDiaAgenda(dStr,dNum){
-  const ags=agendamentos.filter(a=>a.data===dStr);
+  // Agendamentos reais do dia
+  const agsReais=agendamentos.filter(a=>a.data===dStr);
+  // Agendamentos virtuais do dia (historico[] legado)
+  const osIdsReais=new Set(agsReais.map(a=>a.osId));
+  const agsVirtuais=[];
+  historico.flatMap(m=>m.ordens||[]).forEach(o=>{
+    if(osIdsReais.has(o.id))return;
+    const dataPos=o.dataServico||(o.dataFechamento?o.dataFechamento.slice(0,10):null)||(o.dataCriacao?o.dataCriacao.slice(0,10):null);
+    if(dataPos!==dStr)return;
+    agsVirtuais.push({
+      id:'virt_'+o.id,osId:o.id,osNum:o.numero,
+      cliNome:o.cliNome,cliWpp:o.cliWpp,cliEnd:o.localServico||o.cliEnd||'',
+      data:dataPos,hora:o.horaServico||'',valor:o.total||0,
+      servico:o.itens?o.itens.map(i=>i.tipo).join(', '):'',
+      obs:o.obs||'',formaPgto:o.formaPgto||'',status:'confirmado',_virtual:true
+    });
+  });
+  const ags=[...agsReais,...agsVirtuais];
   const dt=new Date(dStr+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
   document.getElementById('modal-ag-dia-title').textContent='📅 '+dt;
   if(!ags.length){
@@ -2439,6 +2495,7 @@ function buildAgCard(ag,noModal){
   const os=ordens.find(o=>o.id===ag.osId)||[...historico.flatMap(m=>m.ordens||[])].find(o=>o.id===ag.osId);
   const executado=os&&os.executado===true;
   const osCancelada=os&&os.status==='cancelado';
+  const ehVirtual=!!ag._virtual; // OS do historico[] legado — apenas leitura
 
   let statusCls, statusLabel;
   if(osCancelada){
@@ -2447,12 +2504,30 @@ function buildAgCard(ag,noModal){
   } else if(executado){
     statusCls='exec';
     statusLabel='✅ Executado';
+  } else if(ehVirtual){
+    statusCls='exec';
+    statusLabel='✅ Executado';
   } else {
     statusCls='conf';
     statusLabel='🟢 Agendado';
   }
 
   const dtFmt=ag.data?new Date(ag.data+'T12:00:00').toLocaleDateString('pt-BR'):'';
+  const botoesAcao=ehVirtual
+    // Card virtual (legado): só WhatsApp, sem ações
+    ? `<button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>`
+    : `
+      <button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>
+      ${!osCancelada&&!executado?`<button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="remarcarAg('${ag.id}')">📅 Remarcar</button>`:''}
+      ${!osCancelada&&!executado&&(ag.cliWpp||'').replace(/\D/g,'').length>=10
+        ?`<button class="btn-lembrete-wpp" onclick="lembreteWpp('${ag.id}')">📲 Lembrete</button>`:''}
+      ${!osCancelada&&!executado
+        ?`<button class="btn btn-g" style="padding:6px 12px;font-size:12px;" onclick="marcarExecutado('${ag.id}')">✅ Executado</button>`:''}
+      ${executado
+        ?`<button class="btn btn-o" style="padding:6px 12px;font-size:12px;border-color:var(--orange);color:var(--orange);" onclick="desfazerExecutado('${ag.id}')">↩️ Desfazer</button>`:''}
+      ${!osCancelada&&!executado
+        ?`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="cancelarOSdaAgenda('${ag.id}')">🔴 Cancelar</button>`:''}
+    `;
   return `<div class="ag-item ${statusCls}" id="agcard_${ag.id}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <div>
@@ -2473,19 +2548,7 @@ function buildAgCard(ag,noModal){
       <span style="font-size:16px;font-weight:700;color:var(--green);">${fmtMoeda(ag.valor)}</span>
       ${ag.obs?`<span style="font-size:11px;color:var(--muted);">📝 ${ag.obs}</span>`:''}
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>
-      ${!osCancelada&&!executado?`<button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="remarcarAg('${ag.id}')">📅 Remarcar</button>`:''}
-      ${!osCancelada&&!executado&&(ag.cliWpp||'').replace(/\D/g,'').length>=10
-        ?`<button class="btn-lembrete-wpp" onclick="lembreteWpp('${ag.id}')">📲 Lembrete</button>`
-        :''}
-      ${!osCancelada&&!executado
-        ?`<button class="btn btn-g" style="padding:6px 12px;font-size:12px;" onclick="marcarExecutado('${ag.id}')">✅ Executado</button>`
-        :''}
-      ${!osCancelada&&!executado
-        ?`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="cancelarOSdaAgenda('${ag.id}')">🔴 Cancelar</button>`
-        :''}
-    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${botoesAcao}</div>
   </div>`;
 }
 function getFechadasMes(){
@@ -3186,19 +3249,21 @@ function showCloudToast(){
 
 let _tabAtual = 'home';
 function mudarTab(t){
-  const tabs=['home','nova-os','hist','agenda','faturamento','clientes','historico','reat','config'];
+  const tabs=['home','nova-os','hist','agenda','faturamento','clientes','reat','config'];
   tabs.forEach((x,i)=>{
     const btn=document.querySelectorAll('.tab')[i];
     if(btn)btn.classList.toggle('active',x===t);
     const el=document.getElementById('tab-'+x);
     if(el)el.classList.toggle('active',x===t);
   });
+  // Manter tab-historico sempre oculto (removido da nav mas preservado no DOM)
+  const elHist=document.getElementById('tab-historico');
+  if(elHist){elHist.classList.remove('active');}
   _tabAtual = t;
   if(t==='home')rendHome();
   if(t==='hist')rendHist();
   if(t==='clientes')subTabCli('lista');
   if(t==='reat')calcReativacao(false);
-  if(t==='historico')rendHistoricoCompleto();
   if(t==='config'){rendTipos();rendPrecosTabela();atualizarStatusBackup();}
   if(t==='agenda')rendAgenda();
   if(t==='faturamento')rendFaturamento();
@@ -3216,7 +3281,7 @@ function irParaOSPendentes(){
   mudarTab('hist'); // Orçamentos já só mostra pendentes
 }
 function irParaAprovadas(){
-  mudarTab('historico'); // Aprovadas ficam no Histórico
+  mudarTab('agenda'); // Aprovadas ficam na Agenda (histórico permanente)
 }
 function irParaAgendaAmanha(){
   const d=new Date();d.setDate(d.getDate()+1);
@@ -3294,6 +3359,19 @@ function marcarExecutado(agId){
     fecharModal('modal-ag-dia');
     rendAgenda();
     toast('✅ Serviço marcado como executado!');
+  });
+}
+
+function desfazerExecutado(agId){
+  const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
+  const os=ordens.find(o=>o.id===ag.osId);if(!os)return;
+  confirmar('↩️ Desfazer Execução','Tem certeza que deseja reverter este serviço para "Agendado"? Use apenas em caso de imprevisto.','↩️ Desfazer','btn-o',()=>{
+    os.executado=false;
+    delete os.dataExecucao;
+    salvarLocal();
+    fecharModal('modal-ag-dia');
+    rendAgenda();
+    toast('↩️ Execução desfeita — serviço voltou para Agendado.');
   });
 }
 
