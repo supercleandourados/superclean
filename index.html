@@ -50,10 +50,11 @@ header{background:rgba(7,18,42,.95);border-bottom:1px solid var(--border);paddin
 .home-cal-nav{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .home-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
 .home-cal-dow{font-size:10px;font-weight:700;color:var(--muted);text-align:center;padding:4px 0;}
-.home-cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;position:relative;}
+.home-cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;border-radius:8px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;position:relative;overflow:hidden;padding:4px 2px;gap:1px;}
 .home-cal-day.outro{color:rgba(255,255,255,.2);}
 .home-cal-day.hoje{background:var(--blue);color:#fff;font-weight:800;}
-.home-cal-day.tem-ag::after{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);position:absolute;bottom:2px;}
+.home-cal-day.tem-ag{background:rgba(76,175,34,.07);border:1px solid rgba(76,175,34,.3);}
+.home-cal-day.tem-ag::after{display:none;}
 .home-cal-day.feriado-dia{color:var(--orange);}
 .home-cal-day.hoje.feriado-dia{background:var(--orange);color:#fff;}
 .home-feriados{margin-top:8px;border-top:1px solid var(--border);padding-top:8px;}
@@ -907,7 +908,7 @@ select option{background:#0a1e38;}
 
     <!-- AÇÃO STATUS -->
     <div style="margin-bottom:16px;background:rgba(76,175,34,.08);border:1px solid rgba(76,175,34,.25);border-radius:10px;padding:14px;">
-      <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Status do Orçamento</div>
+      <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Alterar Status da OS</div>
       <select id="share-status-sel" style="margin-bottom:0;" onchange="updStatusShare()">
         <option value="pendente">🟡 Pendente — em negociação</option>
         <option value="aprovado">🟢 Agendado — serviço confirmado</option>
@@ -2047,7 +2048,7 @@ function updStatusShare(){
       agInfoEl.style.display='block';
       return;
     }
-    confirmar('🟢 Confirmar Aprovação','Tem certeza que deseja aprovar esta OS? Ela entrará na Agenda e no Faturamento.','✅ Aprovar','btn-g',()=>{
+    confirmar('🟢 Confirmar Agendamento','Tem certeza que deseja agendar esta OS? Ela entrará na Agenda.','🟢 Agendar','btn-g',()=>{
       os.status='aprovado';
       os.executado=false;
       os.mes=getMesKey();
@@ -2070,7 +2071,7 @@ function updStatusShare(){
 
   // CANCELADO: confirmar antes
   if(s==='cancelado'){
-    confirmar('🔴 Confirmar Cancelamento','Tem certeza que deseja cancelar esta OS? Ela será removida da Agenda e do Faturamento.','🔴 Cancelar OS','btn-d',()=>{
+    confirmar('🔴 Confirmar Cancelamento','Tem certeza que deseja cancelar esta OS? Ela será removida da Agenda.','🔴 Cancelar OS','btn-d',()=>{
       os.status='cancelado';
       os.dataCancelamento=new Date().toISOString();
       if(antigo==='aprovado'){
@@ -2078,7 +2079,7 @@ function updStatusShare(){
         delete os.dataFechamento;
       }
       salvarLocal({ordens:true,agenda:true});updStats();rendProxServicos();rendFaturamento();
-      toast('🔴 OS cancelada — removida da Agenda e Faturamento.');
+      toast('🔴 OS cancelada — removida da Agenda.');
     });
     document.getElementById('share-status-sel').value=antigo;
     return;
@@ -2739,7 +2740,7 @@ function fatVoltarPendente(osId){
   if(!os){toast('⚠️ OS não encontrada',true);return;}
   confirmar(
     '↩️ Voltar para Pendente',
-    `A OS #${String(os.numero).padStart(4,'0')} de ${os.cliNome} (${fmtMoeda(os.total)}) será removida do Faturamento e voltará para Orçamentos. Nenhum dado será apagado.`,
+    `A OS #${String(os.numero).padStart(4,'0')} de ${os.cliNome} (${fmtMoeda(os.total)}) voltará para Orçamentos (Pendente). O agendamento será removido.`,
     '↩️ Confirmar','btn-o',
     ()=>{
       os.status='pendente';
@@ -2750,7 +2751,7 @@ function fatVoltarPendente(osId){
       // Remover agendamento vinculado
       agendamentos=agendamentos.filter(a=>String(a.osId)!==String(os.id));
       salvarLocal({ordens:true,agenda:true});updStats();rendFaturamento();rendHist();rendProxServicos();
-      toast('↩️ OS voltou para Pendente e saiu do Faturamento.');
+      toast('↩️ OS voltou para Pendente.');
     }
   );
 }
@@ -3163,37 +3164,61 @@ function rendCalendarioHome(){
   const primeiroDia=new Date(homeCalAno,homeCalMes,1).getDay();
   const diasNoMes=new Date(homeCalAno,homeCalMes+1,0).getDate();
   const diasAntMes=new Date(homeCalAno,homeCalMes,0).getDate();
+  const key=homeCalAno+'-'+String(homeCalMes+1).padStart(2,'0');
 
-  // Agendamentos do mês
+  // Agendamentos do mês — filtrar por OS não cancelada
+  const todasOSMapaHome={};
+  getTodasOS().forEach(o=>{todasOSMapaHome[o.id]=o;});
   const agsMes=agendamentos.filter(a=>{
-    if(!a.data)return false;
-    const [ay,am]=a.data.split('-');
-    return parseInt(ay)===homeCalAno&&parseInt(am)-1===homeCalMes&&a.status!=='cancelado';
+    if(!a.data||!a.data.startsWith(key))return false;
+    const os=todasOSMapaHome[a.osId];
+    return os&&os.status!=='cancelado';
   });
+
+  // Mapa: dia → {agendados, executados, valor}
   const mapaAg={};
   agsMes.forEach(ag=>{
     const d=parseInt((ag.data||'').split('-')[2]);
-    mapaAg[d]=(mapaAg[d]||0)+1;
+    if(!mapaAg[d])mapaAg[d]={ag:0,ex:0,val:0};
+    const os=todasOSMapaHome[ag.osId];
+    if(os&&os.executado===true){
+      mapaAg[d].ex++;
+      mapaAg[d].val+=parseFloat(ag.valor||0);
+    } else {
+      mapaAg[d].ag++;
+      mapaAg[d].val+=parseFloat(ag.valor||0);
+    }
   });
 
   let html='';
-  // Dias mês anterior
   for(let i=primeiroDia-1;i>=0;i--){
     html+=`<div class="home-cal-day outro">${diasAntMes-i}</div>`;
   }
-  // Dias do mês
   for(let d=1;d<=diasNoMes;d++){
     const dStr=homeCalAno+'-'+String(homeCalMes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const isHoje=dStr===hoje_str;
-    const temAg=mapaAg[d]>0;
+    const info=mapaAg[d];
+    const temAg=!!info;
     const isFer=!!feriados[dStr];
     let cls='home-cal-day';
     if(isHoje)cls+=' hoje';
     if(temAg)cls+=' tem-ag';
     if(isFer&&!isHoje)cls+=' feriado-dia';
-    html+=`<div class="${cls}" onclick="mudarTab('agenda')">${d}</div>`;
+    // Badges
+    let badges='';
+    if(isFer) badges+=`<span style="font-size:8px;color:var(--orange);line-height:1;width:100%;text-align:center;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${feriados[dStr].split(' ')[0]}</span>`;
+    if(info){
+      if(info.ag) badges+=`<span class="cal-badge conf" style="font-size:8px;padding:0 3px;">${info.ag} ag.</span>`;
+      if(info.ex) badges+=`<span class="cal-badge exec-badge" style="font-size:8px;padding:0 3px;">${info.ex} ex.</span>`;
+      if(info.val>0){
+        const v=info.val>=1000?'R$'+(info.val/1000).toFixed(1)+'k':'R$'+Math.round(info.val);
+        badges+=`<span class="cal-badge val-badge" style="font-size:8px;padding:0 3px;">${v}</span>`;
+      }
+    }
+    html+=`<div class="${cls}" onclick="navParaDiaAgenda('${dStr}',${d})" style="justify-content:flex-start;padding:4px 2px;gap:1px;overflow:hidden;align-items:center;">
+      <span style="font-size:11px;font-weight:600;width:100%;text-align:center;line-height:1.4;">${d}</span>${badges}
+    </div>`;
   }
-  // Completar grade
   const total=primeiroDia+diasNoMes;
   const resto=total%7===0?0:7-(total%7);
   for(let d=1;d<=resto;d++){
@@ -3206,12 +3231,19 @@ function rendCalendarioHome(){
     const [ay,am]=dt.split('-');
     return parseInt(ay)===homeCalAno&&parseInt(am)-1===homeCalMes;
   }).sort(([a],[b])=>a.localeCompare(b));
-
   const ferHtml=ferDoMes.length?ferDoMes.map(([dt,nome])=>{
     const dia=parseInt(dt.split('-')[2]);
     return `<div class="home-feriado-item"><strong>${String(dia).padStart(2,'0')}</strong>${nome}</div>`;
   }).join(''):'';
   document.getElementById('home-feriados-lista').innerHTML=ferHtml;
+}
+
+function navParaDiaAgenda(dStr,dNum){
+  const partes=dStr.split('-');
+  agendaAno=parseInt(partes[0]);
+  agendaMes=parseInt(partes[1])-1;
+  mudarTab('agenda');
+  setTimeout(()=>abrirDiaAgenda(dStr,dNum),200);
 }
 function rendHome(){
   // Saudação
@@ -3573,14 +3605,14 @@ function cancelarOSdaAgenda(agId){
   if(!ag){toast('⚠️ Agendamento não encontrado',true);return;}
   const os=ordens.find(o=>o.id===ag.osId||String(o.id)===String(ag.osId));
   if(!os){toast('⚠️ OS não encontrada',true);return;}
-  confirmar('🔴 Cancelar OS','Tem certeza que deseja cancelar esta OS? Ela será removida do Faturamento.','🔴 Cancelar OS','btn-d',()=>{
+  confirmar('🔴 Cancelar OS','Tem certeza que deseja cancelar esta OS? Ela será removida da Agenda.','🔴 Cancelar OS','btn-d',()=>{
     os.status='cancelado';
     os.dataCancelamento=new Date().toISOString();
     delete os.dataFechamento;
     salvarLocal({ordens:true,agenda:true});updStats();rendFaturamento();
     fecharModal('modal-ag-dia');
     rendAgenda();
-    toast('🔴 OS cancelada.');
+    toast('🔴 OS cancelada — removida da Agenda.');
   });
 }
 function excluirAg(agId){
@@ -3623,7 +3655,7 @@ function updStatus(id,s){
   if(s==='aprovado'){
     // Se já tem data/hora salva, confirmar e aprovar
     if(os.dataServico&&os.horaServico){
-      confirmar('🟢 Confirmar Aprovação','Tem certeza que deseja aprovar esta OS? Ela entrará na Agenda e no Faturamento.','✅ Aprovar','btn-g',()=>{
+      confirmar('🟢 Confirmar Agendamento','Tem certeza que deseja agendar esta OS? Ela entrará na Agenda.','🟢 Agendar','btn-g',()=>{
         os.status='aprovado';
         os.executado=false;
         os.mes=getMesKey();
@@ -3659,7 +3691,7 @@ function updStatus(id,s){
       criarAgendamento(os,dataAg,horaAg);
       salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
       fecharModal('modal-aprovar-os');
-      toast('🟢 Aprovado! Adicionado à Agenda e Faturamento.');
+      toast('🟢 Agendado! Serviço confirmado na Agenda.');
     };
     const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
     if(sel)sel.value=antigo;
@@ -3677,7 +3709,7 @@ function updStatus(id,s){
         delete os.dataAprovacao;
       }
       salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
-      toast('🔴 OS cancelada.');
+      toast('🔴 OS cancelada — removida da Agenda.');
     });
     const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
     if(sel)sel.value=antigo;
