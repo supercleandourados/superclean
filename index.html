@@ -420,7 +420,7 @@ select option{background:#0a1e38;}
       </div>
       <div class="home-card home-card-clicavel" onclick="irParaAprovadas()" style="cursor:pointer;">
         <div class="hc-num" id="hc-aprov" style="color:var(--green)">0</div>
-        <div class="hc-label">✅ Aprovadas mês</div>
+        <div class="hc-label">✅ Executadas mês</div>
       </div>
     </div>
 
@@ -446,7 +446,7 @@ select option{background:#0a1e38;}
 
     <!-- Rodapé financeiro -->
     <div class="home-rodape" id="home-rodape-fat">
-      💰 R$ 0,00 em vendas aprovadas esse mês
+      💰 R$ 0,00 em serviços executados esse mês
     </div>
   </div>
   <div id="tab-nova-os" class="tbc">
@@ -602,7 +602,7 @@ select option{background:#0a1e38;}
   </div>
   <div id="tab-faturamento" class="tbc">
     <div class="modal-title-h">💰 Faturamento</div>
-    <div class="modal-sub-txt">Somente orçamentos aprovados (🟢 Aprovado)</div>
+    <div class="modal-sub-txt">Somente serviços executados (✅ Executado)</div>
 
     <!-- KPIs -->
     <div class="fat-kpi">
@@ -688,7 +688,7 @@ select option{background:#0a1e38;}
 
     <!-- Lista vendas fechadas do mês -->
     <div class="card">
-      <div class="ctitle">🟢 Orçamentos Aprovados — Mês Atual</div>
+      <div class="ctitle">✅ Serviços Executados — Mês Atual</div>
       <div id="fat-lista-mes"></div>
     </div>
   </div>
@@ -910,7 +910,7 @@ select option{background:#0a1e38;}
       <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Status do Orçamento</div>
       <select id="share-status-sel" style="margin-bottom:0;" onchange="updStatusShare()">
         <option value="pendente">🟡 Pendente — em negociação</option>
-        <option value="aprovado">🟢 Aprovado — venda confirmada e agendado</option>
+        <option value="aprovado">🟢 Agendado — serviço confirmado</option>
         <option value="cancelado">🔴 Cancelado — serviço não será executado</option>
       </select>
       <div id="share-agenda-info" class="aprov-box" style="margin-top:10px;display:none;">
@@ -1851,7 +1851,7 @@ function verCliente(id){
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <span>${new Date(o.dataCriacao).toLocaleDateString('pt-BR')}</span>
-      <span class="hst ${o.status==='aprovado'?'sf':o.status==='cancelado'?'st-canc':'sp'}">${o.status==='aprovado'?'🟢 Aprovado':o.status==='cancelado'?'🔴 Cancelado':'🟡 Pendente'}</span>
+      <span class="hst ${o.status==='aprovado'?'sf':o.status==='cancelado'?'st-canc':'sp'}">${o.status==='aprovado'?'🟢 Agendado':o.status==='cancelado'?'🔴 Cancelado':'🟡 Pendente'}</span>
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.itens?o.itens.map(i=>i.tipo).join(', '):''}</div>
   </div>`).join(''):'<div class="empty" style="padding:16px 0;">Nenhuma OS ainda</div>'}
@@ -2061,7 +2061,7 @@ function updStatusShare(){
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
       criarAgendamento(os,dataAg,horaAg);
       salvarLocal({ordens:true,agenda:true});updStats();rendProxServicos();rendFaturamento();
-      toast('🟢 Aprovado! Adicionado à Agenda e Faturamento automaticamente.');
+      toast('🟢 Agendado! Serviço confirmado na Agenda.');
     });
     // Resetar select enquanto aguarda confirmação
     document.getElementById('share-status-sel').value=antigo;
@@ -2320,7 +2320,7 @@ function renderOS(o,comActions,isHistorico){
     actions=`<div class="brow-os">
       <select onchange="updStatus(${o.id},this.value)" style="flex:1;min-width:140px;padding:8px 10px;font-size:13px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text)">
         <option value="pendente"${o.status==='pendente'?' selected':''}>🟡 Pendente</option>
-        <option value="aprovado"${o.status==='aprovado'?' selected':''}>🟢 Aprovado</option>
+        <option value="aprovado"${o.status==='aprovado'?' selected':''}>🟢 Agendado</option>
         <option value="cancelado"${o.status==='cancelado'?' selected':''}>🔴 Cancelado</option>
       </select>
       <button class="btn btn-wpp" style="padding:8px 14px;font-size:13px;white-space:nowrap;" onclick="abrirCompartilhar(${o.id})">📤 Compartilhar</button>
@@ -2337,7 +2337,7 @@ function renderOS(o,comActions,isHistorico){
       <span>📅 ${dt}</span>
       ${o.localServico?`<span>📍 ${o.localServico}</span>`:''}
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${res}</span>
-      <span class="hst ${sc}">${o.status==='aprovado'?'🟢 Aprovado':o.status==='cancelado'?'🔴 Cancelado':'🟡 Pendente'}</span>
+      <span class="hst ${sc}">${o.status==='aprovado'?'🟢 Agendado':o.status==='cancelado'?'🔴 Cancelado':'🟡 Pendente'}</span>
       ${o.formaPgto?`<span style="font-size:10px;background:rgba(27,111,216,.15);color:var(--sky);border:1px solid rgba(27,111,216,.3);border-radius:5px;padding:2px 7px;">${o.formaPgto}</span>`:''}
     </div>
     ${tagOrigem ? `<div style="margin-top:5px;">${tagOrigem}</div>` : ''}
@@ -2650,14 +2650,14 @@ function buildAgCard(ag,noModal){
 function getFechadasMes(){
   const key = getMesKey();
   return getFechadasTodas().filter(o=>{
-    const df = o.dataFechamento || o.dataCriacao;
+    const df = o.dataExecucao || o.dataFechamento || o.dataCriacao;
     return df && df.slice(0,7) === key;
   });
 }
 function getFechadasTodas(){
   const k = _getFatCacheKey();
   if(_fatCache && _fatCacheKey === k) return _fatCache;
-  _fatCache = getTodasOS().filter(o=>o.status==='aprovado');
+  _fatCache = getTodasOS().filter(o=>o.executado===true);
   _fatCacheKey = k;
   return _fatCache;
 }
@@ -2714,15 +2714,15 @@ function rendFaturamento(){
       </div>`).join(''):'<div class="empty" style="font-size:12px;">Sem dados</div>';
   }
   const listaEl=document.getElementById('fat-lista-mes');
-  if(!mesOrd.length){listaEl.innerHTML='<div class="empty">Nenhuma venda fechada este mês</div>';return;}
-  listaEl.innerHTML=mesOrd.sort((a,b)=>new Date(b.dataFechamento||b.dataCriacao)-new Date(a.dataFechamento||a.dataCriacao))
+  if(!mesOrd.length){listaEl.innerHTML='<div class="empty">Nenhum serviço executado este mês</div>';return;}
+  listaEl.innerHTML=mesOrd.sort((a,b)=>new Date(b.dataExecucao||b.dataFechamento||b.dataCriacao)-new Date(a.dataExecucao||a.dataFechamento||a.dataCriacao))
     .map(o=>`<div class="fat-item">
       <div class="htop">
         <div><span class="hnome">${o.cliNome}</span><span class="hos">OS #${String(o.numero).padStart(4,'0')}</span></div>
         <span class="hval">${fmtMoeda(o.total)}</span>
       </div>
       <div class="hinfo">
-        <span>📅 ${new Date(o.dataFechamento||o.dataCriacao).toLocaleDateString('pt-BR')}</span>
+        <span>📅 ${new Date(o.dataExecucao||o.dataFechamento||o.dataCriacao).toLocaleDateString('pt-BR')}</span>
         ${o.localServico?`<span>📍 ${o.localServico}</span>`:''}
         ${o.formaPgto?`<span style="font-size:10px;background:rgba(27,111,216,.12);color:var(--sky);border:1px solid rgba(27,111,216,.25);border-radius:4px;padding:1px 6px;">${o.formaPgto}</span>`:''}
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.itens?.map(i=>i.tipo).join(', ')||''}</span>
@@ -2777,7 +2777,7 @@ function rendGrafico(todasFech){
   const dados=meses.map((_,i)=>{
     const key=ano+'-'+String(i+1).padStart(2,'0');
     const v=todasFech.filter(o=>{
-      const dt=new Date(o.dataFechamento||o.dataCriacao);
+      const dt=new Date(o.dataExecucao||o.dataFechamento||o.dataCriacao);
       return dt.getFullYear()===ano&&dt.getMonth()===i;
     }).reduce((a,o)=>a+parseFloat(o.total||0),0);
     return{mes:meses[i],val:v};
@@ -2866,7 +2866,7 @@ function rendHistoricoCompleto(){
     return `<div class="mes-group">
       <div class="mes-header" onclick="document.getElementById('${mid}').classList.toggle('open')">
         <div class="mes-title">📅 ${getMesLabel(key)}</div>
-        <div class="mes-stats">${nAprov>0?'🟢 '+nAprov+' aprovada'+(nAprov!==1?'s':''):''}${nAprov>0&&nCanc>0?' · ':''}${nCanc>0?'🔴 '+nCanc+' cancelada'+(nCanc!==1?'s':''):''}${nAprov>0?' · '+fmtMoeda(totalMes):''}</div>
+        <div class="mes-stats">${nAprov>0?'🟢 '+nAprov+' agendada'+(nAprov!==1?'s':''):''}${nAprov>0&&nCanc>0?' · ':''}${nCanc>0?'🔴 '+nCanc+' cancelada'+(nCanc!==1?'s':''):''}${nAprov>0?' · '+fmtMoeda(totalMes):''}</div>
       </div>
       <div class="mes-body" id="${mid}">
         ${oss.map(o=>`${renderOS(o,false,true)}<div style="margin-bottom:4px;"><button class="btn" style="padding:5px 10px;font-size:11px;background:rgba(100,180,255,.12);color:var(--sky);border:1px solid rgba(100,180,255,.3);margin-top:-4px;" onclick="abrirCompartilhar(${o.id})">📤 Compartilhar</button></div>`).join('')}
@@ -3027,8 +3027,8 @@ let _fatCache = null;
 let _fatCacheKey = '';
 
 function _getFatCacheKey(){
-  const k = _getTodasOSKey();
-  return k;
+  const nExec=ordens.filter(o=>o.executado).length;
+  return _getTodasOSKey()+'|'+nExec;
 }
 function invalidarFatCache(){
   _fatCache = null;
@@ -3045,7 +3045,7 @@ function marcarDirty(...abas){
 }
 
 function updStats(){
-  const fechadas=ordens.filter(o=>o.status==='aprovado');
+  const fechadas=ordens.filter(o=>o.executado===true);
   document.getElementById('st').textContent=ordens.length;
   document.getElementById('sf').textContent=fechadas.length;
   document.getElementById('sc').textContent=clientes.length;
@@ -3068,7 +3068,7 @@ function updStats(){
     const fechadasMes=getFechadasMes();
     const fatMes=fechadasMes.reduce((a,o)=>a+parseFloat(o.total||0),0);
     document.getElementById('hc-fat').textContent=fmtMoeda(fatMes);
-    document.getElementById('home-rodape-fat').textContent='💰 '+fmtMoeda(fatMes)+' em vendas aprovadas esse mês';
+    document.getElementById('home-rodape-fat').textContent='💰 '+fmtMoeda(fatMes)+' em serviços executados esse mês';
     const hcAmanha=document.getElementById('hc-amanha');
     if(hcAmanha)hcAmanha.textContent=agAmanha;
     const hcAprov=document.getElementById('hc-aprov');
@@ -3235,7 +3235,7 @@ function rendHome(){
   document.getElementById('hc-fat').textContent=fmtMoeda(fatMes);
 
   // Rodapé
-  document.getElementById('home-rodape-fat').textContent=`💰 ${fmtMoeda(fatMes)} em vendas aprovadas esse mês`;
+  document.getElementById('home-rodape-fat').textContent=`💰 ${fmtMoeda(fatMes)} em serviços executados esse mês`;
 
   // Calendário
   homeCalAno=new Date().getFullYear();
@@ -3632,7 +3632,7 @@ function updStatus(id,s){
         agendamentos=agendamentos.filter(a=>a.osId!==os.id);
         criarAgendamento(os,os.dataServico,os.horaServico);
         salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
-        toast('🟢 Aprovado! Adicionado à Agenda e Faturamento.');
+        toast('🟢 Agendado! Serviço confirmado na Agenda.');
       });
       // Resetar select visual enquanto aguarda confirmação
       const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
