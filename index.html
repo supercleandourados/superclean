@@ -837,6 +837,41 @@ select option{background:#0a1e38;}
       </p>
     </div>
 
+    <!-- SAÚDE DO SISTEMA -->
+    <div class="card" style="margin-bottom:16px;border-color:rgba(42,171,238,.25);">
+      <div class="ctitle">📊 Saúde do Sistema</div>
+      <div id="sistema-saude-lista" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;color:var(--muted);">OS em ordens[]</span>
+          <span style="font-size:13px;font-weight:700;color:#fff;" id="ss-ordens">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;color:var(--muted);">OS arquivadas em histórico[]</span>
+          <span style="font-size:13px;font-weight:700;color:#fff;" id="ss-historico">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;color:var(--muted);">Clientes</span>
+          <span style="font-size:13px;font-weight:700;color:#fff;" id="ss-clientes">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;color:var(--muted);">localStorage usado</span>
+          <span style="font-size:13px;font-weight:700;" id="ss-ls-uso">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
+          <span style="font-size:13px;color:var(--muted);">Firebase (plano gratuito)</span>
+          <a href="https://console.firebase.google.com/project/superclean-2130d/usage" target="_blank"
+             style="font-size:12px;color:var(--sky);text-decoration:none;padding:4px 10px;border:1px solid rgba(42,171,238,.3);border-radius:6px;">
+            Ver no Console →
+          </a>
+        </div>
+      </div>
+      <button class="btn btn-o" onclick="atualizarSaudeSistema()" style="width:100%;margin-top:12px;font-size:12px;">🔄 Atualizar</button>
+      <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;text-align:center;">
+        ⚠️ Plano gratuito Firebase: 1GB armazenamento · 50k leituras/dia.<br>
+        Verifique mensalmente a partir do mês 8 de uso.
+      </p>
+    </div>
+
     <div class="card">
       <div class="ctitle">⚙️ Tipos de Estofados</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Adicione, edite ou remova os tipos que aparecem nos orçamentos.</p>
@@ -1079,7 +1114,7 @@ window.fbSalvar = async function() {
       meta:         String(window._sc.meta||0),
       updatedAt:    new Date().toISOString()
     });
-    setTimeout(()=>{ _fbSaving = false; }, 500);
+    setTimeout(()=>{ _fbSaving = false; }, 2000);
     if(window.showCloudToast)window.showCloudToast();
   } catch(e) {
     _fbSaving = false;
@@ -1146,7 +1181,7 @@ onSnapshot(REF, (snap) => {
     if(d.osCounter)    { window._sc.osCounter    = parseInt(d.osCounter||'0'); localStorage.setItem('sc_os_counter', d.osCounter); }
     if(d.meta)         { window._sc.meta         = parseFloat(d.meta||'0');    localStorage.setItem('sc_meta',       d.meta); }
     if (_fbLoaded && window.scRender) {
-      if(window._renderPending) return;
+      if(window._renderPending || window._scRendering) return;
       window._renderPending = true;
       requestAnimationFrame(()=>{ window.scRender(); window._renderPending = false; });
     }
@@ -1264,24 +1299,40 @@ window._sc = {
 };
 // Função de re-render global para o Firebase listener
 window.showCloudToast = function(){ showCloudToast(); };
+window._scRendering = false;
 window.scRender = function() {
-  invalidarCatCache();
-  updStats();
-  mesAtual = getMesKey(); document.getElementById('hmes').textContent = getMesLabel(mesAtual);
-  const t = window._tabAtual || 'home';
-  if(t==='home')rendHome();
-  else if(t==='hist')rendHist();
-  else if(t==='clientes'){
-    // Só re-renderizar a sub-aba que está visível
-    const subRanking = document.getElementById('sub-cli-ranking');
-    if(subRanking && subRanking.style.display !== 'none') rendRankingClientes();
-    else rendClientes();
+  // Guard anti-reentrada: se já está renderizando, ignorar
+  if(window._scRendering) return;
+  window._scRendering = true;
+  try {
+    invalidarCatCache();
+    invalidarOSCache();
+    invalidarFatCache();
+    _statsReatKey = '';
+    updStats();
+    mesAtual = getMesKey();
+    const hmesEl = document.getElementById('hmes');
+    if(hmesEl) hmesEl.textContent = getMesLabel(mesAtual);
+    // Marcar todas as abas como dirty
+    marcarDirty('home','hist','faturamento','clientes','reat','agenda');
+    // Renderizar APENAS a aba visível — chamando a função diretamente (não mudarTab)
+    const t = window._tabAtual || 'home';
+    _abasDirty[t] = true;
+    if(t==='home')        { rendHome();            _abasDirty.home=false; }
+    else if(t==='hist')   { rendHist();             _abasDirty.hist=false; }
+    else if(t==='agenda') { rendAgenda();           _abasDirty.agenda=false; }
+    else if(t==='faturamento'){ rendFaturamento();  _abasDirty.faturamento=false; }
+    else if(t==='reat')   { calcReativacao(false);  _abasDirty.reat=false; }
+    else if(t==='nova-os'){ rendProxServicos(); }
+    else if(t==='clientes'){
+      const subRanking=document.getElementById('sub-cli-ranking');
+      if(subRanking&&subRanking.style.display!=='none') rendRankingClientes();
+      else rendClientes();
+      _abasDirty.clientes=false;
+    }
+  } finally {
+    window._scRendering = false;
   }
-  else if(t==='reat')calcReativacao(false);
-  else if(t==='config'){rendTipos();rendPrecosTabela();atualizarStatusBackup();}
-  else if(t==='agenda')rendAgenda();
-  else if(t==='faturamento')rendFaturamento();
-  else if(t==='nova-os')rendProxServicos();
 };
 function getMesKey(){
   const d=new Date();
@@ -1338,6 +1389,7 @@ function init(){
     setTimeout(()=>calcReativacao(true), 800);
     setTimeout(()=>verificarBackupAutomatico(), 2000);
     setTimeout(()=>verificarMesNovo(), 3000);
+    setTimeout(()=>arquivarOSAntigas(), 5000); // arquivamento silencioso
     const syncEl = document.getElementById('fb-sync-status');
     if (syncEl) syncEl.style.display = 'flex';
   }
@@ -1394,6 +1446,8 @@ function _alertarQuotaLS() {
 // opts: true/false (legado = salva tudo) | { ordens, agenda, clientes, historico, tipos, precos, counter }
 function salvarLocal(opts) {
   if(typeof invalidarCatCache === 'function') invalidarCatCache();
+  invalidarOSCache();
+  invalidarFatCache();
   _statsReatKey = '';
 
   const tudo = (opts === true || opts === undefined || opts === false);
@@ -1497,7 +1551,7 @@ function rendRankingClientes() {
   const mesAtualKey = getMesKey();
 
   // Montar OS aprovadas — UMA passagem pelo array
-  const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
+  const todasOS = getTodasOS();
 
   let labelPeriodo = 'Todo Período';
   const mapaGasto = {}, mapaCount = {}, mapaVisitas = {}, mapaNome = {};
@@ -1614,7 +1668,7 @@ function _buildCatCache() {
   const key = clientes.length + '|' + ordens.length + '|' + historico.length;
   if (_catCache && _catCacheKey === key) return _catCache;
   // Montar mapa cliId → total gasto em OS aprovadas
-  const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
+  const todasOS = getTodasOS();
   const mapaTotal = {};
   const mapaCount = {};
   todasOS.forEach(o => {
@@ -1693,7 +1747,7 @@ function rendClientes() {
   if (ordem === 'nome') {
     arr.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   } else if (ordem === 'gasto') {
-    const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
+    const todasOS = getTodasOS();
     arr.sort((a, b) => {
       const ga = todasOS.filter(o=>o.cliId===a.id&&o.status==='aprovado').reduce((s,o)=>s+parseFloat(o.total||0),0) + (a.totalGastoHistorico||0);
       const gb = todasOS.filter(o=>o.cliId===b.id&&o.status==='aprovado').reduce((s,o)=>s+parseFloat(o.total||0),0) + (b.totalGastoHistorico||0);
@@ -1757,7 +1811,7 @@ function rendClientes() {
 }
 function verCliente(id){
   const c=clientes.find(x=>x.id===id);if(!c)return;
-  const os=[...ordens,...historico.flatMap(m=>m.ordens||[])].filter(o=>o.cliId===id);
+  const os=getTodasOS().filter(o=>o.cliId===id);
   const fc=os.filter(o=>o.status==='aprovado');
   const totalGastoOS=fc.reduce((a,o)=>a+parseFloat(o.total||0),0);
   const totalGasto=totalGastoOS+(c.totalGastoHistorico||0);
@@ -1940,7 +1994,7 @@ function salvarOS(){
   updStats();rendProxServicos();
 }
 function abrirCompartilhar(osId){
-  const todas=[...ordens,...historico.flatMap(m=>m.ordens||[])];
+  const todas=getTodasOS();
   const os=todas.find(o=>o.id===osId);if(!os)return;
   osCompartilhar=os;
   document.getElementById('share-os-info').textContent=
@@ -2329,8 +2383,8 @@ function getAgsMes(ano,mes){
   // OS do array historico[] legado que pertencem a este mês — montar como agendamentos virtuais
   const osIds=new Set(agReais.map(a=>a.osId));
   const agVirtuais=[];
-  historico.flatMap(m=>m.ordens||[]).forEach(o=>{
-    if(osIds.has(o.id))return; // já tem agendamento real
+  getTodasOS().filter(o=>historico.length&&!osIds.has(o.id)).forEach(o=>{
+    if(!o.id)return; // já tem agendamento real
     // Usar dataServico ou dataFechamento para posicionar no calendário
     const dataPos=o.dataServico||(o.dataFechamento?o.dataFechamento.slice(0,10):null)||(o.dataCriacao?o.dataCriacao.slice(0,10):null);
     if(!dataPos||!dataPos.startsWith(key))return;
@@ -2375,7 +2429,7 @@ function rendAgenda(){
 
   // Classificar por status real (baseado na OS)
   const todasOSMapa={};
-  [...ordens,...historico.flatMap(m=>m.ordens||[])].forEach(o=>{todasOSMapa[o.id]=o;});
+  getTodasOS().forEach(o=>{todasOSMapa[o.id]=o;});
 
   const agendados=agsMes.filter(a=>{const os=todasOSMapa[a.osId];return os&&os.status==='aprovado'&&!os.executado;});
   const executados=agsMes.filter(a=>{const os=todasOSMapa[a.osId];return os&&os.executado===true;});
@@ -2430,7 +2484,7 @@ function rendCalendario(ano,mes,agsMes){
 
   // Mapa OS para status
   const todasOSMapaCal={};
-  [...ordens,...historico.flatMap(m=>m.ordens||[])].forEach(o=>{todasOSMapaCal[o.id]=o;});
+  getTodasOS().forEach(o=>{todasOSMapaCal[o.id]=o;});
 
   let html='';
   for(let i=primeiroDia-1;i>=0;i--){
@@ -2499,7 +2553,7 @@ function abrirDiaAgenda(dStr,dNum){
   // Agendamentos virtuais do dia (historico[] legado)
   const osIdsReais=new Set(agsReais.map(a=>a.osId));
   const agsVirtuais=[];
-  historico.flatMap(m=>m.ordens||[]).forEach(o=>{
+  getTodasOS().forEach(o=>{
     if(osIdsReais.has(o.id))return;
     const dataPos=o.dataServico||(o.dataFechamento?o.dataFechamento.slice(0,10):null)||(o.dataCriacao?o.dataCriacao.slice(0,10):null);
     if(dataPos!==dStr)return;
@@ -2534,7 +2588,7 @@ function rendListaAgenda(ags,titleId,listaId,titulo){
 
 function buildAgCard(ag,noModal){
   // Determinar status real de exibição na agenda
-  const os=ordens.find(o=>o.id===ag.osId)||[...historico.flatMap(m=>m.ordens||[])].find(o=>o.id===ag.osId);
+  const os=getTodasOS().find(o=>o.id===ag.osId||String(o.id)===String(ag.osId));
   const executado=os&&os.executado===true;
   const osCancelada=os&&os.status==='cancelado';
   const ehVirtual=!!ag._virtual; // OS do historico[] legado — apenas leitura
@@ -2594,16 +2648,18 @@ function buildAgCard(ag,noModal){
   </div>`;
 }
 function getFechadasMes(){
-  // Filtra por dataFechamento no mês atual do calendário — sem depender de o.mes
   const key = getMesKey();
-  const todasAprov = [...ordens, ...historico.flatMap(m=>m.ordens||[])].filter(o=>o.status==='aprovado');
-  return todasAprov.filter(o=>{
+  return getFechadasTodas().filter(o=>{
     const df = o.dataFechamento || o.dataCriacao;
     return df && df.slice(0,7) === key;
   });
 }
 function getFechadasTodas(){
-  return[...ordens,...historico.flatMap(m=>m.ordens||[])].filter(o=>o.status==='aprovado');
+  const k = _getFatCacheKey();
+  if(_fatCache && _fatCacheKey === k) return _fatCache;
+  _fatCache = getTodasOS().filter(o=>o.status==='aprovado');
+  _fatCacheKey = k;
+  return _fatCache;
 }
 function rendFaturamento(){
   const mesOrd=getFechadasMes();
@@ -2776,12 +2832,8 @@ function rendHistoricoCompleto(){
   const busca=(buscaEl?.value||'').toLowerCase().trim();
   const el=document.getElementById('lista-historico');
 
-  // Histórico = todas as OS resolvidas: aprovadas, recusadas e canceladas
-  // ordens[] contém as resolvidas recentes; historico[] contém o legado arquivado
-  const todasResolvidas = [
-    ...ordens.filter(o=>o.status!=='pendente'),
-    ...historico.flatMap(m=>m.ordens||[]).filter(o=>o.status!=='pendente')
-  ];
+  // Histórico = todas as OS resolvidas: aprovadas e canceladas
+  const todasResolvidas = getTodasOS().filter(o=>o.status!=='pendente');
 
   // Filtrar por busca
   const filtradas = busca
@@ -2864,7 +2916,7 @@ function calcReativacao(mostrarAlerta){
   const mapa={};
 
   // 1. OS aprovadas no sistema
-  const todasOS=[...ordens,...historico.flatMap(m=>m.ordens||[])];
+  const todasOS=getTodasOS();
   todasOS.forEach(o=>{
     if(o.status!=='aprovado')return;
     const df=new Date(o.dataFechamento||o.dataCriacao);
@@ -2950,6 +3002,48 @@ function setPreco(tipo,srv,val){
 let _statsReatCache = null;
 let _statsReatKey = '';
 
+// ============ CACHE GLOBAL DE todasOS ============
+// Evita recriar [...ordens,...historico.flatMap()] 18+ vezes por operação
+let _todasOSCache = null;
+let _todasOSKey = '';
+
+function _getTodasOSKey(){
+  return ordens.length+'|'+historico.length+'|'+(ordens[ordens.length-1]?.id||0);
+}
+function getTodasOS(){
+  const k = _getTodasOSKey();
+  if(_todasOSCache && _todasOSKey === k) return _todasOSCache;
+  _todasOSCache = [...ordens, ...historico.flatMap(m=>m.ordens||[])];
+  _todasOSKey = k;
+  return _todasOSCache;
+}
+function invalidarOSCache(){
+  _todasOSCache = null;
+  _todasOSKey = '';
+}
+
+// ============ CACHE DE FATURAMENTO ============
+let _fatCache = null;
+let _fatCacheKey = '';
+
+function _getFatCacheKey(){
+  const k = _getTodasOSKey();
+  return k;
+}
+function invalidarFatCache(){
+  _fatCache = null;
+  _fatCacheKey = '';
+}
+
+// ============ SISTEMA DIRTY — lazy render de abas pesadas ============
+const _abasDirty = {
+  hist: true, faturamento: true, clientes: true,
+  reat: true, agenda: true, home: true
+};
+function marcarDirty(...abas){
+  abas.forEach(a => { _abasDirty[a] = true; });
+}
+
 function updStats(){
   const fechadas=ordens.filter(o=>o.status==='aprovado');
   document.getElementById('st').textContent=ordens.length;
@@ -2987,7 +3081,7 @@ function updStats(){
     if(_statsReatKey!==reatKey){
       setTimeout(()=>{
         const agora=new Date();const seisM=183*24*60*60*1000;
-        const todasAp=[...ordens,...historico.flatMap(m=>m.ordens||[])].filter(o=>o.status==='aprovado');
+        const todasAp=getTodasOS().filter(o=>o.status==='aprovado');
         const mapaR={};
         todasAp.forEach(o=>{const df=new Date(o.dataFechamento||o.dataCriacao);if(!mapaR[o.cliId]||df>mapaR[o.cliId])mapaR[o.cliId]=df;});
         _statsReatCache=Object.values(mapaR).filter(d=>agora-d>=seisM).length;
@@ -3267,7 +3361,7 @@ function rendCliTipo(){
   const mes=getFechadasMes();
   const cliIds=mes.map(o=>o.cliId);
   // Clientes que aparecem no histórico anterior
-  const histClis=new Set(historico.flatMap(m=>m.ordens||[]).filter(o=>o.status==='aprovado').map(o=>o.cliId));
+  const histClis=new Set(getFechadasTodas().map(o=>o.cliId));
   let novos=0,retorno=0;
   const vistos=new Set();
   cliIds.forEach(id=>{
@@ -3289,7 +3383,7 @@ function rendCardHoje(){
   if(elData)elData.textContent=DIAS[now.getDay()]+', '+now.getDate()+'/'+String(now.getMonth()+1).padStart(2,'0');
   // Mostrar apenas agendamentos de hoje de OS não canceladas
   const todasOSMapa={};
-  [...ordens,...historico.flatMap(m=>m.ordens||[])].forEach(o=>{todasOSMapa[o.id]=o;});
+  getTodasOS().forEach(o=>{todasOSMapa[o.id]=o;});
   const agHoje=agendamentos.filter(a=>{
     const os=todasOSMapa[a.osId];
     return a.data===hj&&os&&os.status!=='cancelado';
@@ -3341,17 +3435,25 @@ function mudarTab(t){
     const el=document.getElementById('tab-'+x);
     if(el)el.classList.toggle('active',x===t);
   });
-  // Manter tab-historico sempre oculto (removido da nav mas preservado no DOM)
   const elHist=document.getElementById('tab-historico');
   if(elHist){elHist.classList.remove('active');}
   _tabAtual = t;
-  if(t==='home')rendHome();
-  if(t==='hist')rendHist();
-  if(t==='clientes')subTabCli('lista');
-  if(t==='reat')calcReativacao(false);
-  if(t==='config'){rendTipos();rendPrecosTabela();atualizarStatusBackup();}
-  if(t==='agenda')rendAgenda();
-  if(t==='faturamento')rendFaturamento();
+  // Lazy render: só renderiza se a aba está marcada como dirty
+  if(t==='home'){if(_abasDirty.home){rendHome();_abasDirty.home=false;}}
+  if(t==='hist'){if(_abasDirty.hist){rendHist();_abasDirty.hist=false;}}
+  if(t==='agenda'){if(_abasDirty.agenda){rendAgenda();_abasDirty.agenda=false;}}
+  if(t==='faturamento'){if(_abasDirty.faturamento){rendFaturamento();_abasDirty.faturamento=false;}}
+  if(t==='reat'){if(_abasDirty.reat){calcReativacao(false);_abasDirty.reat=false;}}
+  if(t==='clientes'){
+    if(_abasDirty.clientes){
+      const subRanking=document.getElementById('sub-cli-ranking');
+      if(subRanking&&subRanking.style.display!=='none') rendRankingClientes();
+      else subTabCli('lista');
+      _abasDirty.clientes=false;
+    }
+  }
+  if(t==='config'){rendTipos();rendPrecosTabela();atualizarStatusBackup();atualizarSaudeSistema();}
+  if(t==='nova-os'){rendProxServicos();}
 }
 /* === NAVEGAÇÃO DASHBOARD === */
 function irParaNovoCliente(){
@@ -3700,7 +3802,7 @@ function exportarExcel() {
       ['=== CLIENTES ==='],
       ['Nome', 'WhatsApp', 'Endereço', 'Cadastrado em', 'Total OS', 'Total Gasto (R$)', 'Último Serviço', 'Categoria'],
     ];
-    const todasOS = [...ordens, ...historico.flatMap(m => m.ordens || [])];
+    const todasOS = getTodasOS();
     // Montar mapa cliId → dados (UMA iteração para todos os clientes)
     const mapaOS = {};
     todasOS.forEach(o => {
@@ -3881,6 +3983,86 @@ function processarImport(input) {
 }
 
 // ---- BACKUP AUTOMÁTICO SEMANAL ----
+// ============ ARQUIVAMENTO AUTOMÁTICO DE OS ANTIGAS ============
+// OS com status resolvido e mais de 90 dias migram de ordens[] para historico[]
+// Mantém ordens[] leve e buscas rápidas — roda silenciosamente no startup
+function arquivarOSAntigas(){
+  const DIAS_LIMITE = 90;
+  const corte = Date.now() - DIAS_LIMITE * 24 * 60 * 60 * 1000;
+  const paraArquivar = ordens.filter(o=>{
+    if(o.status === 'pendente') return false; // nunca arquivar pendentes
+    const ref = new Date(o.dataFechamento || o.dataCriacao || 0).getTime();
+    return ref < corte;
+  });
+  if(!paraArquivar.length) return;
+
+  // Agrupar por mês para inserir no historico[]
+  const grupos = {};
+  paraArquivar.forEach(o=>{
+    const key = (o.dataFechamento || o.dataCriacao || '').slice(0,7);
+    if(!grupos[key]) grupos[key] = [];
+    grupos[key].push(o);
+  });
+
+  Object.entries(grupos).forEach(([key, ossDoMes])=>{
+    const existing = historico.find(m=>m.mes===key);
+    if(existing){
+      // Adicionar ao grupo existente evitando duplicatas
+      const ids = new Set(existing.ordens.map(o=>o.id));
+      ossDoMes.forEach(o=>{ if(!ids.has(o.id)) existing.ordens.push(o); });
+    } else {
+      historico.push({ mes: key, ordens: ossDoMes });
+    }
+  });
+
+  const idsArquivados = new Set(paraArquivar.map(o=>o.id));
+  ordens = ordens.filter(o=>!idsArquivados.has(o.id));
+
+  // Também arquivar agendamentos vinculados às OS arquivadas (mantém referência)
+  // Agendamentos ficam no array — são leves e necessários para o calendário histórico
+
+  invalidarOSCache();
+  invalidarFatCache();
+  // Salvar direto no localStorage sem disparar fbSalvar (evita loop onSnapshot)
+  _lsSet('sc_ordens',    JSON.stringify(ordens));
+  _lsSet('sc_historico', JSON.stringify(historico));
+  _lsSet('sc_local_ts',  String(Date.now()));
+  // Sincronizar com Firebase após 3s para não conflitar com o startup
+  setTimeout(()=>{ if(window.fbSalvar) window.fbSalvar(); }, 3000);
+  console.log(`[SC] Arquivadas ${paraArquivar.length} OS antigas (>${DIAS_LIMITE} dias)`);
+}
+
+function atualizarSaudeSistema(){
+  const elOrdens   = document.getElementById('ss-ordens');
+  const elHist     = document.getElementById('ss-historico');
+  const elCli      = document.getElementById('ss-clientes');
+  const elLs       = document.getElementById('ss-ls-uso');
+  if(!elOrdens) return;
+
+  const totalHist = historico.reduce((s,m)=>s+(m.ordens?.length||0),0);
+  elOrdens.textContent  = ordens.length + ' OS';
+  elHist.textContent    = totalHist + ' OS';
+  elCli.textContent     = clientes.length + ' clientes';
+
+  // Calcular uso real do localStorage
+  try {
+    let bytes = 0;
+    const chaves = ['sc_clientes','sc_ordens','sc_historico','sc_agenda','sc_tipos','sc_precos'];
+    chaves.forEach(k=>{ const v=localStorage.getItem(k); if(v) bytes+=v.length*2; }); // UTF-16
+    const kb = (bytes/1024).toFixed(0);
+    const pct = Math.min(100, Math.round(bytes/(5*1024*1024)*100));
+    const cor = pct>80?'var(--red)':pct>60?'var(--orange)':'var(--green)';
+    elLs.textContent = `${kb} KB / 5120 KB (${pct}%)`;
+    elLs.style.color = cor;
+    // Alertar se acima de 80%
+    if(pct>80){
+      elLs.textContent += ' ⚠️ CRÍTICO';
+    }
+  } catch(e) {
+    elLs.textContent = 'Não disponível';
+  }
+}
+
 function verificarMesNovo() {
   // Mês é automático — apenas garantir que mesAtual está atualizado
   const mesHoje = getMesKey();
@@ -3981,14 +4163,13 @@ Estamos passando para *confirmar seu atendimento* agendado para *amanhã*! ✅
 
 📅 Data: ${dataFmt}
 🕐 Horário: ${hora}h
-🧹 Serviço: ${servico}${valor ? '\n💰 Valor: ' + valor : ''}
+🧼 Serviço: ${servico}
 
 Para garantir seu horário, pedimos que responda *CONFIRMADO* nesta mensagem. ✅
 
-Caso não possa comparecer, nos avise com antecedência para que possamos reorganizar a agenda.
+Caso não haja confirmação, o horário poderá ser disponibilizado para outro cliente da agenda.
 
-Agradecemos pela preferência! 🙏
-*Super Clean Higienização* — (67) 99225-3296`;
+Agradecemos pela preferência! 🙏`;
 
   window._agLembrete = { wpp, msg };
 
