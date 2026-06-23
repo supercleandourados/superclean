@@ -339,6 +339,31 @@ select option{background:#0a1e38;}
 /* Classes utilitárias — inline styles consolidados */
 .modal-title-h{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:4px;}
 .modal-sub-txt{font-size:13px;color:var(--muted);margin-bottom:20px;}
+/* ===== RESUMO ORÇAMENTOS ===== */
+.resumo-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;}
+.resumo-cal-dow{text-align:center;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;padding:4px 0;}
+.resumo-cal-day{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:6px 4px;min-height:64px;cursor:pointer;transition:border-color .2s;}
+.resumo-cal-day:hover{border-color:rgba(42,171,238,.4);}
+.resumo-cal-day.today{border-color:var(--sky);background:rgba(42,171,238,.07);}
+.resumo-cal-day.outro-mes{opacity:.3;cursor:default;}
+.resumo-cal-day.vazio{background:transparent;border:none;cursor:default;}
+.resumo-cal-day-num{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.resumo-cal-day.today .resumo-cal-day-num{color:var(--sky);}
+.resumo-badge-ap{font-size:9px;font-weight:700;background:rgba(76,175,34,.25);color:var(--green);border-radius:4px;padding:1px 5px;display:block;text-align:center;margin-bottom:2px;}
+.resumo-badge-pend{font-size:9px;font-weight:700;background:rgba(255,140,0,.25);color:var(--orange);border-radius:4px;padding:1px 5px;display:block;text-align:center;margin-bottom:2px;}
+.resumo-badge-canc{font-size:9px;font-weight:700;background:rgba(229,57,53,.15);color:var(--red);border-radius:4px;padding:1px 5px;display:block;text-align:center;margin-bottom:2px;}
+.resumo-kpi-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;}
+.resumo-kpi-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;}
+.resumo-kpi-qtd{font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700;color:#fff;line-height:1;}
+.resumo-kpi-val{font-size:11px;color:var(--muted);margin-top:2px;}
+.resumo-kpi-card.ap .resumo-kpi-qtd{color:var(--green);}
+.resumo-kpi-card.pend .resumo-kpi-qtd{color:var(--orange);}
+.resumo-kpi-card.canc .resumo-kpi-qtd{color:var(--red);}
+.resumo-dia-item{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .2s;}
+.resumo-dia-item:hover{border-color:rgba(42,171,238,.4);}
+.resumo-dia-item.ap{border-left:3px solid var(--green);}
+.resumo-dia-item.pend{border-left:3px solid var(--orange);}
+.resumo-dia-item.canc{border-left:3px solid var(--red);}
 </style>
 </head>
 <body>
@@ -824,17 +849,39 @@ select option{background:#0a1e38;}
 
   </div>
   <div id="tab-hist" class="tbc">
-    <!-- Sub-abas: Pendentes | Cancelados -->
+    <!-- Sub-abas: Pendentes | Cancelados | Resumo -->
     <div style="display:flex;gap:8px;margin-bottom:14px;">
       <button id="hist-sub-btn-pendente" class="btn btn-g" onclick="setHistAba('pendente')" style="flex:1;font-size:12px;padding:10px 6px;">🟡 Pendentes</button>
       <button id="hist-sub-btn-cancelado" class="btn btn-o" onclick="setHistAba('cancelado')" style="flex:1;font-size:12px;padding:10px 6px;">🔴 Cancelados</button>
+      <button id="hist-sub-btn-resumo" class="btn btn-o" onclick="setHistAba('resumo')" style="flex:1;font-size:12px;padding:10px 6px;">📊 Resumo</button>
     </div>
-    <div style="margin-bottom:12px;">
-      <div style="font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700;color:#fff;" id="hist-title">Orçamentos em Aberto</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:2px;" id="hist-sub">—</div>
+    <!-- Pendentes / Cancelados -->
+    <div id="hist-lista-wrap">
+      <div style="margin-bottom:12px;">
+        <div style="font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700;color:#fff;" id="hist-title">Orçamentos em Aberto</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px;" id="hist-sub">—</div>
+      </div>
+      <input type="text" id="orc-busca" placeholder="🔍 Buscar por cliente ou nº OS..." oninput="rendHist()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
+      <div id="lista-hist"></div>
     </div>
-    <input type="text" id="orc-busca" placeholder="🔍 Buscar por cliente ou nº OS..." oninput="rendHist()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
-    <div id="lista-hist"></div>
+    <!-- Resumo do mês -->
+    <div id="hist-resumo-wrap" style="display:none;">
+      <!-- Navegação mês -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <button onclick="navResumo(-1)" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 16px;font-size:18px;cursor:pointer;">‹</button>
+        <div style="font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700;color:#fff;" id="resumo-mes-label">Junho 2026</div>
+        <button onclick="navResumo(1)" style="background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 16px;font-size:18px;cursor:pointer;">›</button>
+      </div>
+      <!-- Resumo do período -->
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">Resumo do período</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="resumo-kpis"></div>
+      </div>
+      <!-- Contador badges -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;" id="resumo-badges"></div>
+      <!-- Calendário de orçamentos -->
+      <div id="resumo-cal"></div>
+    </div>
   </div>
   <div id="tab-historico" class="tbc" style="display:none!important;">
     <div id="lista-historico"></div>
@@ -1032,6 +1079,20 @@ select option{background:#0a1e38;}
     <div id="modal-ag-dia-body"></div>
     <div class="brow" style="margin-top:16px;">
       <button class="btn btn-o" onclick="fecharModal('modal-ag-dia')" style="flex:1;">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALHE DIA RESUMO ORÇAMENTOS -->
+<div class="modal-overlay" id="modal-resumo-dia">
+  <div class="modal" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="modal-title" style="margin-bottom:0;" id="modal-resumo-dia-title">📋 Orçamentos do dia</div>
+      <button onclick="fecharModal('modal-resumo-dia')" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:0 4px;">✕</button>
+    </div>
+    <div id="modal-resumo-dia-body" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="brow" style="margin-top:12px;">
+      <button class="btn btn-o" onclick="fecharModal('modal-resumo-dia')" style="flex:1;">Fechar</button>
     </div>
   </div>
 </div>
@@ -1391,7 +1452,11 @@ window.scRender = function() {
     const t = window._tabAtual || 'home';
     _abasDirty[t] = true;
     if(t==='home')        { rendHome();            _abasDirty.home=false; }
-    else if(t==='hist')   { rendHist();             _abasDirty.hist=false; }
+    else if(t==='hist')   {
+      if(_histAba==='resumo') rendResumoOrc();
+      else rendHist();
+      _abasDirty.hist=false;
+    }
     else if(t==='agenda') { rendAgenda();           _abasDirty.agenda=false; }
     else if(t==='faturamento'){ rendFaturamento();  _abasDirty.faturamento=false; }
     else if(t==='reat')   { calcReativacao(false);  _abasDirty.reat=false; }
@@ -1663,7 +1728,11 @@ function _renderUIaposAcao() {
     const t = window._tabAtual || 'home';
     _abasDirty[t] = true;
     if(t === 'home')             { rendHome();            _abasDirty.home = false; }
-    else if(t === 'hist')        { rendHist();             _abasDirty.hist = false; }
+    else if(t === 'hist')        {
+      if(_histAba==='resumo') rendResumoOrc();
+      else rendHist();
+      _abasDirty.hist = false;
+    }
     else if(t === 'agenda')      { rendAgenda();           _abasDirty.agenda = false; }
     else if(t === 'faturamento') { rendFaturamento();      _abasDirty.faturamento = false; }
     else if(t === 'reat')        { calcReativacao(false);  _abasDirty.reat = false; }
@@ -3833,7 +3902,8 @@ function rendCardHoje(){
 }
 // rendHistoricoCompleto já existe — vamos sobrescrever com filtro de busca
 let filtroMesAtual='todos';
-let _histAba = 'pendente'; // 'pendente' | 'cancelado'
+let _histAba = 'pendente'; // 'pendente' | 'cancelado' | 'resumo'
+let _resumoMesOffset = 0; // 0 = mês atual, -1 = mês anterior, etc.
 
 function setHistAba(aba) {
   _histAba = aba;
@@ -3842,25 +3912,192 @@ function setHistAba(aba) {
   if(buscaEl)buscaEl.value='';
   const btnPend = document.getElementById('hist-sub-btn-pendente');
   const btnCanc = document.getElementById('hist-sub-btn-cancelado');
-  if (btnPend) {
-    btnPend.className = aba === 'pendente' ? 'btn btn-g' : 'btn btn-o';
-    btnPend.style.background='';btnPend.style.borderColor='';btnPend.style.color='';
+  const btnRes  = document.getElementById('hist-sub-btn-resumo');
+  const listaWrap  = document.getElementById('hist-lista-wrap');
+  const resumoWrap = document.getElementById('hist-resumo-wrap');
+
+  // Reset todos os botões
+  if(btnPend){btnPend.className='btn btn-o';btnPend.style.background='';btnPend.style.borderColor='';btnPend.style.color='';}
+  if(btnCanc){btnCanc.className='btn btn-o';btnCanc.style.background='';btnCanc.style.borderColor='';btnCanc.style.color='';}
+  if(btnRes) {btnRes.className='btn btn-o';btnRes.style.background='';btnRes.style.borderColor='';btnRes.style.color='';}
+
+  // Ativar aba selecionada
+  if(aba==='pendente'){
+    if(btnPend){btnPend.className='btn btn-g';}
+    if(listaWrap) listaWrap.style.display='';
+    if(resumoWrap) resumoWrap.style.display='none';
+    rendHist(true);
+  } else if(aba==='cancelado'){
+    if(btnCanc){btnCanc.className='btn btn-d';btnCanc.style.background='rgba(229,57,53,.25)';btnCanc.style.borderColor='rgba(229,57,53,.5)';btnCanc.style.color='var(--red)';}
+    if(listaWrap) listaWrap.style.display='';
+    if(resumoWrap) resumoWrap.style.display='none';
+    rendHist(true);
+  } else if(aba==='resumo'){
+    if(btnRes){btnRes.className='btn';btnRes.style.background='linear-gradient(135deg,#1B6FD8,#2AABEE)';btnRes.style.color='#fff';}
+    if(listaWrap) listaWrap.style.display='none';
+    if(resumoWrap) resumoWrap.style.display='';
+    rendResumoOrc();
   }
-  if (btnCanc) {
-    if (aba === 'cancelado') {
-      btnCanc.className = 'btn btn-d';
-      btnCanc.style.background = 'rgba(229,57,53,.25)';
-      btnCanc.style.borderColor = 'rgba(229,57,53,.5)';
-      btnCanc.style.color = 'var(--red)';
-    } else {
-      btnCanc.className = 'btn btn-o';
-      btnCanc.style.background = '';
-      btnCanc.style.borderColor = '';
-      btnCanc.style.color = '';
-    }
-  }
-  rendHist(true);
 }
+
+function navResumo(dir){
+  _resumoMesOffset += dir;
+  rendResumoOrc();
+}
+
+function rendResumoOrc(){
+  // Mês alvo
+  const agora = new Date();
+  const ano  = agora.getFullYear();
+  const mes  = agora.getMonth(); // 0-based
+  const alvo = new Date(ano, mes + _resumoMesOffset, 1);
+  const anoAlvo = alvo.getFullYear();
+  const mesAlvo = alvo.getMonth();
+
+  // Label
+  const nomesMes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const labelEl = document.getElementById('resumo-mes-label');
+  if(labelEl) labelEl.textContent = nomesMes[mesAlvo] + ' ' + anoAlvo;
+
+  // Filtrar todas as OS do mês pela data de criação (dataOrc)
+  const todas = getTodasOS();
+  const osDoMes = todas.filter(o => {
+    if(!o.dataOrc) return false;
+    const d = new Date(o.dataOrc + 'T00:00:00');
+    return d.getFullYear()===anoAlvo && d.getMonth()===mesAlvo;
+  });
+
+  // Normalizar status
+  const normStatus = s => (s==='recusado')?'cancelado':(s||'pendente');
+
+  // KPIs
+  const aprov  = osDoMes.filter(o=>normStatus(o.status)==='aprovado');
+  const pend   = osDoMes.filter(o=>normStatus(o.status)==='pendente');
+  const canc   = osDoMes.filter(o=>normStatus(o.status)==='cancelado');
+  const total  = osDoMes;
+
+  const soma = arr => arr.reduce((s,o)=>s+(o.total||0),0);
+
+  const kpisEl = document.getElementById('resumo-kpis');
+  if(kpisEl){
+    kpisEl.innerHTML = `
+      <div class="resumo-kpi-card" style="grid-column:1/-1;border-color:rgba(255,255,255,.12);">
+        <div class="resumo-kpi-label">Total do período</div>
+        <div class="resumo-kpi-qtd" style="color:#fff;">${total.length} orçamentos</div>
+        <div class="resumo-kpi-val">${fmtMoeda(soma(total))}</div>
+      </div>
+      <div class="resumo-kpi-card ap">
+        <div class="resumo-kpi-label">✅ Aprovados</div>
+        <div class="resumo-kpi-qtd">${aprov.length}</div>
+        <div class="resumo-kpi-val">${fmtMoeda(soma(aprov))}</div>
+      </div>
+      <div class="resumo-kpi-card pend">
+        <div class="resumo-kpi-label">🟡 Pendentes</div>
+        <div class="resumo-kpi-qtd">${pend.length}</div>
+        <div class="resumo-kpi-val">${fmtMoeda(soma(pend))}</div>
+      </div>
+      ${canc.length>0?`<div class="resumo-kpi-card canc" style="grid-column:1/-1;">
+        <div class="resumo-kpi-label">🔴 Cancelados</div>
+        <div class="resumo-kpi-qtd">${canc.length}</div>
+        <div class="resumo-kpi-val">${fmtMoeda(soma(canc))}</div>
+      </div>`:''}
+    `;
+  }
+
+  // Badges contador
+  const badgesEl = document.getElementById('resumo-badges');
+  if(badgesEl){
+    badgesEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px;background:rgba(76,175,34,.12);border:1px solid rgba(76,175,34,.3);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--green);">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>${aprov.length} aprovados
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;background:rgba(255,140,0,.12);border:1px solid rgba(255,140,0,.3);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--orange);">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--orange);display:inline-block;"></span>${pend.length} pendentes
+      </div>
+      ${canc.length>0?`<div style="display:flex;align-items:center;gap:6px;background:rgba(229,57,53,.12);border:1px solid rgba(229,57,53,.3);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--red);">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--red);display:inline-block;"></span>${canc.length} cancelados
+      </div>`:''}
+    `;
+  }
+
+  // Calendário
+  const calEl = document.getElementById('resumo-cal');
+  if(!calEl) return;
+
+  const primeiroDia = new Date(anoAlvo, mesAlvo, 1).getDay(); // 0=dom
+  const diasNoMes   = new Date(anoAlvo, mesAlvo+1, 0).getDate();
+  const hoje        = new Date();
+  const hojeStr     = hoje.toISOString().slice(0,10);
+
+  // Agrupar OS por dia
+  const porDia = {};
+  osDoMes.forEach(o=>{
+    const d = o.dataOrc;
+    if(!porDia[d]) porDia[d]={ap:[],pend:[],canc:[]};
+    const st=normStatus(o.status);
+    if(st==='aprovado') porDia[d].ap.push(o);
+    else if(st==='cancelado') porDia[d].canc.push(o);
+    else porDia[d].pend.push(o);
+  });
+
+  const dias=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  let html=`<div class="resumo-cal-grid">${dias.map(d=>`<div class="resumo-cal-dow">${d}</div>`).join('')}`;
+
+  // Células vazias antes do dia 1
+  for(let i=0;i<primeiroDia;i++) html+=`<div class="resumo-cal-day vazio"></div>`;
+
+  for(let dia=1;dia<=diasNoMes;dia++){
+    const dStr=`${anoAlvo}-${String(mesAlvo+1).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+    const isHoje=(dStr===hojeStr);
+    const grupo=porDia[dStr]||{ap:[],pend:[],canc:[]};
+    const temOS=(grupo.ap.length+grupo.pend.length+grupo.canc.length)>0;
+    let cls='resumo-cal-day';
+    if(isHoje) cls+=' today';
+    if(!temOS) cls+=' vazio-dia';
+    const onclick=temOS?`onclick="abrirDetalheDiaResumo('${dStr}',${JSON.stringify(grupo.ap.map(o=>o.id))},${JSON.stringify(grupo.pend.map(o=>o.id))},${JSON.stringify(grupo.canc.map(o=>o.id))})"`:'' ;
+    html+=`<div class="${cls}" ${onclick} style="${temOS?'cursor:pointer;':'cursor:default;'}">
+      <div class="resumo-cal-day-num">${dia}</div>
+      ${grupo.ap.length>0?`<span class="resumo-badge-ap">${grupo.ap.length} aprov.</span>`:''}
+      ${grupo.pend.length>0?`<span class="resumo-badge-pend">${grupo.pend.length} pend.</span>`:''}
+      ${grupo.canc.length>0?`<span class="resumo-badge-canc">${grupo.canc.length} canc.</span>`:''}
+    </div>`;
+  }
+  html+='</div>';
+  calEl.innerHTML=html;
+}
+
+function abrirDetalheDiaResumo(dStr, idsAp, idsPend, idsCanc){
+  const todas=getTodasOS();
+  const partes=dStr.split('-');
+  const d=parseInt(partes[2]),m=parseInt(partes[1]),a=parseInt(partes[0]);
+  const nomesMes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  document.getElementById('modal-resumo-dia-title').textContent=`📋 Orçamentos — ${d} ${nomesMes[m-1]} ${a}`;
+
+  const renderItem=(o,cls)=>{
+    const st=o.status==='recusado'?'cancelado':(o.status||'pendente');
+    const stLabel=st==='aprovado'?'✅ Aprovado':st==='cancelado'?'🔴 Cancelado':'🟡 Pendente';
+    return `<div class="resumo-dia-item ${cls}" onclick="fecharModal('modal-resumo-dia');setTimeout(()=>abrirCompartilhar(${o.id}),200);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:700;color:#fff;">${o.cliNome||'—'}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--green);">${fmtMoeda(o.total||0)}</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px;">OS #${String(o.numero||0).padStart(4,'0')} · ${stLabel}</div>
+    </div>`;
+  };
+
+  let html='';
+  const ap   = idsAp.map(id=>todas.find(o=>String(o.id)===String(id))).filter(Boolean);
+  const pend = idsPend.map(id=>todas.find(o=>String(o.id)===String(id))).filter(Boolean);
+  const canc = idsCanc.map(id=>todas.find(o=>String(o.id)===String(id))).filter(Boolean);
+
+  if(ap.length)   html+=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">✅ Aprovados (${ap.length})</div>`+ap.map(o=>renderItem(o,'ap')).join('');
+  if(pend.length) html+=`<div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:1px;margin:${ap.length?'12px':0} 0 6px;">🟡 Pendentes (${pend.length})</div>`+pend.map(o=>renderItem(o,'pend')).join('');
+  if(canc.length) html+=`<div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin:${(ap.length||pend.length)?'12px':0} 0 6px;">🔴 Cancelados (${canc.length})</div>`+canc.map(o=>renderItem(o,'canc')).join('');
+
+  document.getElementById('modal-resumo-dia-body').innerHTML=html||'<div class="empty">Nenhum orçamento</div>';
+  abrirModal('modal-resumo-dia');
+}
+
 function setFiltroMes(status,btn){
   filtroMesAtual=status;
   const classMap={todos:'ativo',aprovado:'ativo-aprovado',pendente:'ativo-pendente',cancelado:'ativo-cancelado'};
