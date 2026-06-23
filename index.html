@@ -3468,8 +3468,8 @@ function rendCalendarioHome(){
     let badges='';
     if(isFer) badges+=`<span style="font-size:8px;color:var(--orange);line-height:1;width:100%;text-align:center;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${feriados[dStr].split(' ')[0]}</span>`;
     if(info){
-      if(info.ag) badges+=`<span class="cal-badge conf" style="font-size:8px;padding:0 3px;">${info.ag} ag.</span>`;
-      if(info.ex) badges+=`<span class="cal-badge exec-badge" style="font-size:8px;padding:0 3px;">${info.ex} ex.</span>`;
+      if(info.ag) badges+=`<span class="cal-badge conf" style="font-size:8px;padding:0 3px;">${info.ag} agend.</span>`;
+      if(info.ex) badges+=`<span class="cal-badge exec-badge" style="font-size:8px;padding:0 3px;">${info.ex} exec.</span>`;
       if(info.val>0){
         const v=info.val>=1000?'R$'+(info.val/1000).toFixed(1)+'k':'R$'+Math.round(info.val);
         badges+=`<span class="cal-badge val-badge" style="font-size:8px;padding:0 3px;">${v}</span>`;
