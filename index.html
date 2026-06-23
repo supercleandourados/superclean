@@ -1239,7 +1239,7 @@ onSnapshot(REF, (snap) => {
     const tsNuvem = d.updatedAt ? new Date(d.updatedAt).getTime() : 0;
     const tsLocal = parseInt(localStorage.getItem('sc_local_ts') || '0');
     // Se o local foi atualizado DEPOIS do snapshot da nuvem, não sobrescrever
-    if (_fbLoaded && tsLocal > tsNuvem + 2000) {
+    if (_fbLoaded && tsLocal > tsNuvem + 500) {
       console.log('[SC] Snapshot ignorado — local mais recente:', new Date(tsLocal), '> nuvem:', new Date(tsNuvem));
       return;
     }
@@ -2218,20 +2218,32 @@ function salvarOS(){
 }
 function abrirCompartilhar(osId){
   const todas=getTodasOS();
-  const os=todas.find(o=>o.id===osId);if(!os)return;
+  const os=todas.find(o=>o.id===osId||String(o.id)===String(osId));if(!os)return;
   osCompartilhar=os;
   document.getElementById('share-os-info').textContent=
     'OS #'+String(os.numero).padStart(4,'0')+' · '+os.cliNome+' · '+fmtMoeda(os.total);
   const txt=gerarTextoWpp(os);
   document.getElementById('share-wpp-text').textContent=txt;
-  // Sincroniza select com status atual
+  // Verificar se OS está em ordens[] (ativa) ou arquivada em historico[]
+  const osAtiva=ordens.find(o=>o.id===osId||String(o.id)===String(osId));
+  const statusSel=document.getElementById('share-status-sel');
   // Normalizar status legado (recusado → cancelado)
   const statusNorm=(os.status==='recusado')?'cancelado':(os.status||'pendente');
-  document.getElementById('share-status-sel').value=statusNorm;
+  statusSel.value=statusNorm;
+  // OS arquivada: desabilitar select de status
+  if(!osAtiva){
+    statusSel.disabled=true;
+    statusSel.style.opacity='0.5';
+    statusSel.title='OS arquivada — somente visualização';
+  } else {
+    statusSel.disabled=false;
+    statusSel.style.opacity='';
+    statusSel.title='';
+  }
   const agInfoEl=document.getElementById('share-agenda-info');
   agInfoEl.style.display=(statusNorm==='aprovado')?'block':'none';
   // Preenche data/hora se já existir agendamento ou dados salvos
-  const agExist=agendamentos.find(a=>a.osId===os.id);
+  const agExist=agendamentos.find(a=>a.osId===os.id||String(a.osId)===String(os.id));
   if(agExist){
     document.getElementById('share-data-ag').value=agExist.data||os.dataServico||hoje();
     document.getElementById('share-hora-ag').value=agExist.hora||os.horaServico||'08:00';
@@ -2245,8 +2257,14 @@ function abrirCompartilhar(osId){
 function updStatusShare(){
   if(!osCompartilhar)return;
   const s=document.getElementById('share-status-sel').value;
-  const os=ordens.find(o=>o.id===osCompartilhar.id);
-  if(!os)return;
+  // Buscar em ordens[] primeiro; se arquivada, não permite alterar status
+  const os=ordens.find(o=>o.id===osCompartilhar.id||String(o.id)===String(osCompartilhar.id));
+  if(!os){
+    // OS arquivada (>90 dias) — só leitura, não permite alterar
+    toast('ℹ️ Esta OS está arquivada. Apenas visualização disponível.', true);
+    document.getElementById('share-status-sel').value=osCompartilhar.status||'pendente';
+    return;
+  }
   const antigo=os.status;
 
   // Não fazer nada se status não mudou
