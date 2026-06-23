@@ -291,10 +291,12 @@ select option{background:#0a1e38;}
 .ag-item.conf{border-left:3px solid var(--conf);}
 .ag-item.pend{border-left:3px solid var(--pend);}
 .ag-item.canc{border-left:3px solid var(--canc);opacity:.7;}
+.ag-item.exec{border-left:3px solid var(--sky);}
 .ag-status-badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;display:inline-block;}
 .ag-status-badge.conf{background:rgba(76,175,34,.2);color:var(--green);}
 .ag-status-badge.pend{background:rgba(255,140,0,.2);color:var(--orange);}
 .ag-status-badge.canc{background:rgba(229,57,53,.2);color:var(--red);}
+.ag-status-badge.exec{background:rgba(42,171,238,.2);color:var(--sky);}
 
 /* ===== FATURAMENTO ===== */
 .fat-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
@@ -524,12 +526,12 @@ select option{background:#0a1e38;}
 
     <!-- Indicadores compactos -->
     <div class="agenda-indicadores">
-      <div class="ag-ind"><div class="ag-dot dot-conf"></div><span id="ag-ct-conf">0 confirmados</span></div>
-      <div class="ag-ind"><div class="ag-dot dot-pend"></div><span id="ag-ct-pend">0 pendentes</span></div>
+      <div class="ag-ind"><div class="ag-dot dot-conf"></div><span id="ag-ct-conf">0 agendados</span></div>
+      <div class="ag-ind"><div class="ag-dot" style="background:var(--sky);"></div><span id="ag-ct-pend">0 executados</span></div>
       <div class="ag-ind"><div class="ag-dot dot-canc"></div><span id="ag-ct-canc">0 cancelados</span></div>
     </div>
 
-    <!-- Resumo financeiro estilo CERA — confirmados vs pendentes em destaque -->
+    <!-- Resumo financeiro -->
     <div style="background:rgba(13,31,60,.75);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;">
       <div style="font-size:11px;font-weight:700;color:var(--sky);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">📊 Resumo da Agenda</div>
 
@@ -543,27 +545,27 @@ select option{background:#0a1e38;}
         <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;">
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Ticket médio</div>
           <div style="font-size:18px;font-weight:800;color:#fff;" id="ag-ticket">R$ 0,00</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">por agendamento</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">por serviço aprovado</div>
         </div>
       </div>
 
-      <!-- Confirmados e Pendentes em destaque (igual ao CERA) -->
+      <!-- Agendados e Executados em destaque -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
         <div style="background:rgba(76,175,34,.1);border:1px solid rgba(76,175,34,.3);border-radius:10px;padding:12px;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
             <div style="width:10px;height:10px;border-radius:50%;background:var(--green);"></div>
-            <span style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;">Confirmados</span>
+            <span style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.5px;">Agendados</span>
           </div>
           <div style="font-size:11px;color:var(--muted);" id="ag-ct-conf-n">0 serviços</div>
           <div style="font-size:20px;font-weight:800;color:var(--green);margin-top:4px;" id="ag-conf-val">R$ 0,00</div>
         </div>
-        <div style="background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.3);border-radius:10px;padding:12px;">
+        <div style="background:rgba(42,171,238,.1);border:1px solid rgba(42,171,238,.3);border-radius:10px;padding:12px;">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
-            <div style="width:10px;height:10px;border-radius:50%;background:var(--orange);"></div>
-            <span style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.5px;">Pendentes</span>
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--sky);"></div>
+            <span style="font-size:11px;font-weight:700;color:var(--sky);text-transform:uppercase;letter-spacing:.5px;">Executados</span>
           </div>
           <div style="font-size:11px;color:var(--muted);" id="ag-ct-pend-n">0 serviços</div>
-          <div style="font-size:20px;font-weight:800;color:var(--orange);margin-top:4px;" id="ag-pend-val">R$ 0,00</div>
+          <div style="font-size:20px;font-weight:800;color:var(--sky);margin-top:4px;" id="ag-pend-val">R$ 0,00</div>
         </div>
       </div>
 
@@ -870,10 +872,9 @@ select option{background:#0a1e38;}
     <div style="margin-bottom:16px;background:rgba(76,175,34,.08);border:1px solid rgba(76,175,34,.25);border-radius:10px;padding:14px;">
       <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">📋 Status do Orçamento</div>
       <select id="share-status-sel" style="margin-bottom:0;" onchange="updStatusShare()">
-        <option value="pendente">🟡 Pendente</option>
-        <option value="aprovado">🟢 Aprovado — entra na Agenda e Faturamento</option>
-        <option value="recusado">🔴 Recusado</option>
-        <option value="cancelado">⚫ Cancelado</option>
+        <option value="pendente">🟡 Pendente — em negociação</option>
+        <option value="aprovado">🟢 Aprovado — venda confirmada e agendado</option>
+        <option value="cancelado">🔴 Cancelado — serviço não será executado</option>
       </select>
       <div id="share-agenda-info" class="aprov-box" style="margin-top:10px;display:none;">
         <div class="aprov-title">📅 Data e Horário do Serviço (obrigatório)</div>
@@ -896,10 +897,6 @@ select option{background:#0a1e38;}
           </select>
         </div>
         <div style="font-size:11px;color:var(--muted);">📌 Ao salvar, o serviço entra automaticamente na Agenda e no Faturamento.</div>
-      </div>
-      <div id="share-recusa-info" style="margin-top:10px;display:none;background:rgba(229,57,53,.08);border:1px solid rgba(229,57,53,.25);border-radius:8px;padding:12px;">
-        <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📝 Motivo da Recusa (opcional)</div>
-        <textarea id="share-motivo-recusa" rows="2" placeholder="Ex: Preço alto, cliente não tem interesse agora..." style="width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(229,57,53,.3);border-radius:6px;padding:8px;font-size:13px;color:var(--text);font-family:'Inter',sans-serif;resize:none;"></textarea>
       </div>
     </div>
 
@@ -1768,8 +1765,7 @@ function verCliente(id){
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
       <span>${new Date(o.dataCriacao).toLocaleDateString('pt-BR')}</span>
-      <span class="hst ${o.status==='aprovado'?'sf':o.status==='recusado'?'sr':o.status==='cancelado'?'st-canc':'sp'}">${o.status==='aprovado'?'🟢 Aprovada':o.status==='recusado'?'🔴 Recusada':o.status==='cancelado'?'⚫ Cancelada':'🟡 Pendente'}</span>
-      ${o.motivoRecusa?`<span style="color:var(--red);font-size:10px;">— ${o.motivoRecusa}</span>`:''}
+      <span class="hst ${o.status==='aprovado'?'sf':o.status==='cancelado'?'st-canc':'sp'}">${o.status==='aprovado'?'🟢 Aprovado':o.status==='cancelado'?'🔴 Cancelado':'🟡 Pendente'}</span>
     </div>
     <div style="font-size:11px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.itens?o.itens.map(i=>i.tipo).join(', '):''}</div>
   </div>`).join(''):'<div class="empty" style="padding:16px 0;">Nenhuma OS ainda</div>'}
@@ -1886,6 +1882,7 @@ function salvarOS(){
     localServico:document.getElementById('local-servico')?.value.trim()||'',
     obs:document.getElementById('obs').value.trim(),
     status:'pendente',
+    executado:false,
     dataCriacao:new Date().toISOString(),mes:getMesKey(), // mês real automático
     dataServico:dataServPrev||undefined,
     horaServico:horaServPrev||undefined,
@@ -1919,14 +1916,11 @@ function abrirCompartilhar(osId){
   const txt=gerarTextoWpp(os);
   document.getElementById('share-wpp-text').textContent=txt;
   // Sincroniza select com status atual
-  document.getElementById('share-status-sel').value=os.status||'pendente';
+  // Normalizar status legado (recusado → cancelado)
+  const statusNorm=(os.status==='recusado')?'cancelado':(os.status||'pendente');
+  document.getElementById('share-status-sel').value=statusNorm;
   const agInfoEl=document.getElementById('share-agenda-info');
-  const recusaEl=document.getElementById('share-recusa-info');
-  agInfoEl.style.display=(os.status==='aprovado')?'block':'none';
-  if(recusaEl)recusaEl.style.display=(os.status==='recusado')?'block':'none';
-  // Preenche campo motivo se existir
-  const motivoEl=document.getElementById('share-motivo-recusa');
-  if(motivoEl)motivoEl.value=os.motivoRecusa||'';
+  agInfoEl.style.display=(statusNorm==='aprovado')?'block':'none';
   // Preenche data/hora se já existir agendamento ou dados salvos
   const agExist=agendamentos.find(a=>a.osId===os.id);
   if(agExist){
@@ -1946,13 +1940,18 @@ function updStatusShare(){
   if(!os)return;
   const antigo=os.status;
 
-  // Mostrar/ocultar campos de data+hora e motivo
-  const agInfoEl=document.getElementById('share-agenda-info');
-  const recusaEl=document.getElementById('share-recusa-info');
-  agInfoEl.style.display=(s==='aprovado')?'block':'none';
-  if(recusaEl)recusaEl.style.display=(s==='recusado')?'block':'none';
+  // Não fazer nada se status não mudou
+  if(s===antigo){
+    const agInfoEl=document.getElementById('share-agenda-info');
+    agInfoEl.style.display=(s==='aprovado')?'block':'none';
+    return;
+  }
 
-  // VALIDAÇÃO: ao aprovar, data e hora são obrigatórias
+  // Mostrar/ocultar campos de data+hora
+  const agInfoEl=document.getElementById('share-agenda-info');
+  agInfoEl.style.display=(s==='aprovado')?'block':'none';
+
+  // APROVADO: validar data e hora
   if(s==='aprovado'){
     const dataAg=document.getElementById('share-data-ag').value;
     const horaAg=document.getElementById('share-hora-ag').value;
@@ -1962,40 +1961,55 @@ function updStatusShare(){
       agInfoEl.style.display='block';
       return;
     }
-    // Aplicar aprovação
-    os.status='aprovado';
-    os.mes=getMesKey(); // mês real do fechamento
-    os.dataFechamento=new Date().toISOString();
-    os.dataServico=dataAg;
-    os.horaServico=horaAg;
-    const pgtoShareEl=document.getElementById('share-pgto');
-    if(pgtoShareEl&&pgtoShareEl.value)os.formaPgto=pgtoShareEl.value;
-    delete os.motivoRecusa;
-    // Criar/atualizar agendamento
-    agendamentos=agendamentos.filter(a=>a.osId!==os.id);
-    criarAgendamento(os, dataAg, horaAg);
-    salvarLocal();updStats();rendProxServicos();rendFaturamento();
-    toast('🟢 Aprovado! Adicionado à Agenda e Faturamento automaticamente.');
+    confirmar('🟢 Confirmar Aprovação','Tem certeza que deseja aprovar esta OS? Ela entrará na Agenda e no Faturamento.','✅ Aprovar','btn-g',()=>{
+      os.status='aprovado';
+      os.executado=false;
+      os.mes=getMesKey();
+      os.dataFechamento=new Date().toISOString();
+      os.dataAprovacao=new Date().toISOString();
+      os.dataServico=dataAg;
+      os.horaServico=horaAg;
+      const pgtoShareEl=document.getElementById('share-pgto');
+      if(pgtoShareEl&&pgtoShareEl.value)os.formaPgto=pgtoShareEl.value;
+      delete os.motivoRecusa;
+      agendamentos=agendamentos.filter(a=>a.osId!==os.id);
+      criarAgendamento(os,dataAg,horaAg);
+      salvarLocal();updStats();rendProxServicos();rendFaturamento();
+      toast('🟢 Aprovado! Adicionado à Agenda e Faturamento automaticamente.');
+    });
+    // Resetar select enquanto aguarda confirmação
+    document.getElementById('share-status-sel').value=antigo;
     return;
   }
 
-  // RECUSADO: salvar motivo
-  if(s==='recusado'){
-    const motivoEl=document.getElementById('share-motivo-recusa');
-    os.motivoRecusa=motivoEl?motivoEl.value.trim():'';
-  } else {
-    delete os.motivoRecusa;
+  // CANCELADO: confirmar antes
+  if(s==='cancelado'){
+    confirmar('🔴 Confirmar Cancelamento','Tem certeza que deseja cancelar esta OS? Ela será removida da Agenda e do Faturamento.','🔴 Cancelar OS','btn-d',()=>{
+      os.status='cancelado';
+      os.dataCancelamento=new Date().toISOString();
+      if(antigo==='aprovado'){
+        agendamentos=agendamentos.filter(a=>a.osId!==os.id);
+        delete os.dataFechamento;
+      }
+      salvarLocal();updStats();rendProxServicos();rendFaturamento();
+      toast('🔴 OS cancelada — removida da Agenda e Faturamento.');
+    });
+    document.getElementById('share-status-sel').value=antigo;
+    return;
   }
 
-  // RECUSADO ou CANCELADO: remover da agenda e faturamento
-  os.status=s;
-  if(antigo==='aprovado'){
-    agendamentos=agendamentos.filter(a=>a.osId!==os.id);
-  }
-  delete os.dataFechamento;
-  salvarLocal();updStats();rendProxServicos();rendFaturamento();
-  const msgs={recusado:'🔴 Recusado — removido da Agenda e Faturamento.',cancelado:'⚫ Cancelado — removido da Agenda e Faturamento.',pendente:'🟡 Voltou para Pendente.'};
-  toast(msgs[s]||'✅ Status atualizado.');
+  // PENDENTE: confirmar alteração
+  confirmar('🟡 Voltar para Pendente','Tem certeza que deseja alterar esta OS para Pendente?','🟡 Confirmar','btn-o',()=>{
+    os.status='pendente';
+    if(antigo==='aprovado'){
+      agendamentos=agendamentos.filter(a=>a.osId!==os.id);
+      delete os.dataFechamento;
+      delete os.dataAprovacao;
+    }
+    salvarLocal();updStats();rendProxServicos();rendFaturamento();
+    toast('🟡 OS voltou para Pendente.');
+  });
+  document.getElementById('share-status-sel').value=antigo;
 }
 
 function criarAgendamento(os, data, hora){
@@ -2200,7 +2214,7 @@ function gerarPDF(){
   toast('🖨️ Caixa de impressão aberta — escolha "Salvar como PDF"');
 }
 function renderOS(o,comActions,isHistorico){
-  const sc={pendente:'sp',aprovado:'sf',recusado:'sr',cancelado:'st-canc'}[o.status]||'sp';
+  const sc={pendente:'sp',aprovado:'sf',cancelado:'st-canc'}[o.status]||'sp';
   const dt=new Date(o.dataCriacao).toLocaleDateString('pt-BR');
   const res=o.itens.map(i=>(i.qtd>1?i.qtd+'× ':'')+i.tipo+' ('+i.srvNome+')').join(', ');
   // Indicador de dias aguardando — só para pendentes na aba Orçamentos
@@ -2221,8 +2235,7 @@ function renderOS(o,comActions,isHistorico){
       <select onchange="updStatus(${o.id},this.value)" style="flex:1;min-width:140px;padding:8px 10px;font-size:13px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text)">
         <option value="pendente"${o.status==='pendente'?' selected':''}>🟡 Pendente</option>
         <option value="aprovado"${o.status==='aprovado'?' selected':''}>🟢 Aprovado</option>
-        <option value="recusado"${o.status==='recusado'?' selected':''}>🔴 Recusado</option>
-        <option value="cancelado"${o.status==='cancelado'?' selected':''}>⚫ Cancelado</option>
+        <option value="cancelado"${o.status==='cancelado'?' selected':''}>🔴 Cancelado</option>
       </select>
       <button class="btn btn-wpp" style="padding:8px 14px;font-size:13px;white-space:nowrap;" onclick="abrirCompartilhar(${o.id})">📤 Compartilhar</button>
       <button class="btn btn-o" style="padding:8px 14px;font-size:13px;" onclick="duplicarOS(${o.id})" title="Duplicar">📋</button>
@@ -2238,7 +2251,7 @@ function renderOS(o,comActions,isHistorico){
       <span>📅 ${dt}</span>
       ${o.localServico?`<span>📍 ${o.localServico}</span>`:''}
       <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${res}</span>
-      <span class="hst ${sc}">${o.status==='aprovado'?'🟢 Aprovada':o.status==='recusado'?'🔴 Recusada':o.status==='cancelado'?'⚫ Cancelada':'🟡 Pendente'}</span>
+      <span class="hst ${sc}">${o.status==='aprovado'?'🟢 Aprovado':o.status==='cancelado'?'🔴 Cancelado':'🟡 Pendente'}</span>
       ${o.formaPgto?`<span style="font-size:10px;background:rgba(27,111,216,.15);color:var(--sky);border:1px solid rgba(27,111,216,.3);border-radius:5px;padding:2px 7px;">${o.formaPgto}</span>`:''}
     </div>
     ${tagOrigem ? `<div style="margin-top:5px;">${tagOrigem}</div>` : ''}
@@ -2288,36 +2301,42 @@ function rendAgenda(){
   document.getElementById('agenda-mes-label').textContent=getMesNome(agendaMes)+' '+agendaAno;
   const agsMes=getAgsMes(agendaAno,agendaMes);
 
-  // Indicadores
-  const conf=agsMes.filter(a=>a.status==='confirmado');
-  const pend=agsMes.filter(a=>a.status==='pendente');
-  const canc=agsMes.filter(a=>a.status==='cancelado');
-  // Resumo financeiro
-  const totalV=agsMes.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
-  const confV=conf.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
-  const pendV=pend.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
-  const cancV=canc.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
+  // Classificar por status real (baseado na OS)
+  const todasOSMapa={};
+  [...ordens,...historico.flatMap(m=>m.ordens||[])].forEach(o=>{todasOSMapa[o.id]=o;});
+
+  const agendados=agsMes.filter(a=>{const os=todasOSMapa[a.osId];return os&&os.status==='aprovado'&&!os.executado;});
+  const executados=agsMes.filter(a=>{const os=todasOSMapa[a.osId];return os&&os.executado===true;});
+  const cancelados=agsMes.filter(a=>{const os=todasOSMapa[a.osId];return os&&os.status==='cancelado';});
+
+  // Resumo financeiro — baseado em APROVADOS (agendados + executados)
+  const totalAprov=[...agendados,...executados];
+  const totalV=totalAprov.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
+  const agendadosV=agendados.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
+  const executadosV=executados.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
+  const canceladosV=cancelados.reduce((a,ag)=>a+parseFloat(ag.valor||0),0);
+
   document.getElementById('ag-total-srv').textContent=agsMes.length;
   document.getElementById('ag-total-val').textContent=fmtMoeda(totalV);
-  document.getElementById('ag-conf-val').textContent=fmtMoeda(confV);
-  document.getElementById('ag-pend-val').textContent=fmtMoeda(pendV);
-  document.getElementById('ag-canc-val').textContent=fmtMoeda(cancV);
-  document.getElementById('ag-ticket').textContent=agsMes.length?fmtMoeda(totalV/agsMes.length):'R$ 0,00';
-  // Atualizar contadores dos novos cards de confirmados/pendentes
+  document.getElementById('ag-conf-val').textContent=fmtMoeda(agendadosV);
+  document.getElementById('ag-pend-val').textContent=fmtMoeda(executadosV);
+  document.getElementById('ag-canc-val').textContent=fmtMoeda(canceladosV);
+  document.getElementById('ag-ticket').textContent=totalAprov.length?fmtMoeda(totalV/totalAprov.length):'R$ 0,00';
+
+  // Atualizar contadores dos cards
   const elConfN=document.getElementById('ag-ct-conf-n');
   const elPendN=document.getElementById('ag-ct-pend-n');
-  if(elConfN)elConfN.textContent=conf.length+' serviço'+(conf.length!==1?'s':'');
-  if(elPendN)elPendN.textContent=pend.length+' serviço'+(pend.length!==1?'s':'');
-  // Manter indicadores compactos do topo também atualizados
-  document.getElementById('ag-ct-conf').textContent=conf.length+' confirmado'+(conf.length!==1?'s':'');
-  document.getElementById('ag-ct-pend').textContent=pend.length+' pendente'+(pend.length!==1?'s':'');
-  document.getElementById('ag-ct-canc').textContent=canc.length+' cancelado'+(canc.length!==1?'s':'');
+  if(elConfN)elConfN.textContent=agendados.length+' serviço'+(agendados.length!==1?'s':'');
+  if(elPendN)elPendN.textContent=executados.length+' serviço'+(executados.length!==1?'s':'');
+  document.getElementById('ag-ct-conf').textContent=agendados.length+' agendado'+(agendados.length!==1?'s':'');
+  document.getElementById('ag-ct-pend').textContent=executados.length+' executado'+(executados.length!==1?'s':'');
+  document.getElementById('ag-ct-canc').textContent=cancelados.length+' cancelado'+(cancelados.length!==1?'s':'');
 
   // Calendário
   rendCalendario(agendaAno,agendaMes,agsMes);
 
   // Lista do mês
-  rendListaAgenda(agsMes,'ag-lista-title','agenda-lista','Todos os agendamentos do mês');
+  rendListaAgenda(agsMes,'ag-lista-title','agenda-lista','Todos os serviços do mês');
 }
 
 function rendCalendario(ano,mes,agsMes){
@@ -2336,6 +2355,10 @@ function rendCalendario(ano,mes,agsMes){
     mapaAg[d].push(ag);
   });
 
+  // Mapa OS para status (para badges corretos)
+  const todasOSMapaCal={};
+  [...ordens,...historico.flatMap(m=>m.ordens||[])].forEach(o=>{todasOSMapaCal[o.id]=o;});
+
   let html='';
   // Dias do mês anterior
   for(let i=primeiroDia-1;i>=0;i--){
@@ -2348,13 +2371,14 @@ function rendCalendario(ano,mes,agsMes){
     const ags=mapaAg[d]||[];
     const temAg=ags.length>0;
     const isFer=!!feriados[dStr];
-    const cConf=ags.filter(a=>a.status==='confirmado').length;
-    const cPend=ags.filter(a=>a.status==='pendente').length;
+    // Classificar por status da OS
+    const cAgendados=ags.filter(a=>{const os=todasOSMapaCal[a.osId];return os&&os.status==='aprovado'&&!os.executado;}).length;
+    const cExec=ags.filter(a=>{const os=todasOSMapaCal[a.osId];return os&&os.executado===true;}).length;
     let badges='';
     if(isFer)badges+=`<span style="font-size:9px;color:var(--orange);display:block;line-height:1.1;">${feriados[dStr].split(' ')[0]}</span>`;
-    if(cConf)badges+=`<span class="cal-badge conf">${cConf} serv.</span>`;
-    if(cPend)badges+=`<span class="cal-badge pend">${cPend} pend.</span>`;
-    if(ags.length&&!cConf&&!cPend)badges+=`<span class="cal-badge">${ags.length} serv.</span>`;
+    if(cAgendados)badges+=`<span class="cal-badge conf">${cAgendados} ag.</span>`;
+    if(cExec)badges+=`<span class="cal-badge" style="background:rgba(42,171,238,.25);color:var(--sky);">${cExec} ex.</span>`;
+    if(ags.length&&!cAgendados&&!cExec)badges+=`<span class="cal-badge">${ags.length} serv.</span>`;
     html+=`<div class="cal-day${isHoje?' today':''}${temAg?' tem-agenda':''}${isFer?' feriado':''}" onclick="abrirDiaAgenda('${dStr}',${d})">
       <div class="cal-day-num">${d}</div>${badges}
     </div>`;
@@ -2393,7 +2417,7 @@ function abrirDiaAgenda(dStr,dNum){
   const dt=new Date(dStr+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
   document.getElementById('modal-ag-dia-title').textContent='📅 '+dt;
   if(!ags.length){
-    document.getElementById('modal-ag-dia-body').innerHTML='<div class="empty">Nenhum agendamento neste dia</div>';
+    document.getElementById('modal-ag-dia-body').innerHTML='<div class="empty">Nenhum serviço neste dia</div>';
   } else {
     document.getElementById('modal-ag-dia-body').innerHTML=ags.sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')).map(ag=>buildAgCard(ag,true)).join('');
   }
@@ -2411,8 +2435,23 @@ function rendListaAgenda(ags,titleId,listaId,titulo){
 }
 
 function buildAgCard(ag,noModal){
-  const statusCls=ag.status==='confirmado'?'conf':ag.status==='cancelado'?'canc':'pend';
-  const statusLabel=ag.status==='confirmado'?'🟢 Confirmado':ag.status==='cancelado'?'🔴 Cancelado':'🟡 Pendente';
+  // Determinar status real de exibição na agenda
+  const os=ordens.find(o=>o.id===ag.osId)||[...historico.flatMap(m=>m.ordens||[])].find(o=>o.id===ag.osId);
+  const executado=os&&os.executado===true;
+  const osCancelada=os&&os.status==='cancelado';
+
+  let statusCls, statusLabel;
+  if(osCancelada){
+    statusCls='canc';
+    statusLabel='🔴 Cancelado';
+  } else if(executado){
+    statusCls='exec';
+    statusLabel='✅ Executado';
+  } else {
+    statusCls='conf';
+    statusLabel='🟢 Agendado';
+  }
+
   const dtFmt=ag.data?new Date(ag.data+'T12:00:00').toLocaleDateString('pt-BR'):'';
   return `<div class="ag-item ${statusCls}" id="agcard_${ag.id}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -2436,13 +2475,16 @@ function buildAgCard(ag,noModal){
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;">
       <button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>
-      <button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="remarcarAg('${ag.id}')">📅 Remarcar</button>
-      ${ag.status!=='cancelado'&&(ag.cliWpp||'').replace(/\D/g,'').length>=10
+      ${!osCancelada&&!executado?`<button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="remarcarAg('${ag.id}')">📅 Remarcar</button>`:''}
+      ${!osCancelada&&!executado&&(ag.cliWpp||'').replace(/\D/g,'').length>=10
         ?`<button class="btn-lembrete-wpp" onclick="lembreteWpp('${ag.id}')">📲 Lembrete</button>`
         :''}
-      ${ag.status!=='cancelado'
-        ?`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="cancelarAg('${ag.id}')">❌ Cancelar</button>`
-        :`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="excluirAg('${ag.id}')">🗑️ Excluir</button>`}
+      ${!osCancelada&&!executado
+        ?`<button class="btn btn-g" style="padding:6px 12px;font-size:12px;" onclick="marcarExecutado('${ag.id}')">✅ Executado</button>`
+        :''}
+      ${!osCancelada&&!executado
+        ?`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="cancelarOSdaAgenda('${ag.id}')">🔴 Cancelar</button>`
+        :''}
     </div>
   </div>`;
 }
@@ -2554,16 +2596,24 @@ function rendProxServicos(){
   const el=document.getElementById('prox-servicos');
   if(!el)return;
   const hj=today();
-  const prox=agendamentos.filter(a=>a.data>=hj&&a.status!=='cancelado')
+  // Montar mapa OS para filtrar
+  const todasOSMapaProx={};
+  ordens.forEach(o=>{todasOSMapaProx[o.id]=o;});
+  const prox=agendamentos.filter(a=>{
+    const os=todasOSMapaProx[a.osId];
+    return a.data>=hj&&os&&os.status==='aprovado';
+  })
     .sort((a,b)=>a.data.localeCompare(b.data)||(a.hora||'').localeCompare(b.hora||''))
     .slice(0,5);
   if(!prox.length){el.innerHTML='<div class="empty" style="padding:10px 0;font-size:12px;">Nenhum serviço agendado</div>';return;}
   el.innerHTML=prox.map(ag=>{
+    const os=todasOSMapaProx[ag.osId];
+    const executado=os&&os.executado===true;
     const dtFmt=ag.data===hj?'Hoje':ag.data===amanha()?'Amanhã':new Date(ag.data+'T12:00:00').toLocaleDateString('pt-BR');
     return`<div class="prox-item">
       <div>
         <div style="font-weight:600;font-size:13px;color:#fff;">${ag.cliNome}</div>
-        <div style="font-size:11px;color:var(--muted);">${dtFmt} · ${ag.hora||'—'}</div>
+        <div style="font-size:11px;color:var(--muted);">${dtFmt} · ${ag.hora||'—'}${executado?' · ✅ Executado':''}</div>
       </div>
       <div style="font-size:13px;font-weight:700;color:var(--green);">${fmtMoeda(ag.valor)}</div>
     </div>`;
@@ -2613,12 +2663,12 @@ function rendHistoricoCompleto(){
     const oss=grupos[key].sort((a,b)=>new Date(b.dataFechamento||b.dataCriacao)-new Date(a.dataFechamento||a.dataCriacao));
     const totalMes=oss.filter(o=>o.status==='aprovado').reduce((a,o)=>a+parseFloat(o.total||0),0);
     const nAprov=oss.filter(o=>o.status==='aprovado').length;
-    const nRecus=oss.filter(o=>o.status==='recusado'||o.status==='cancelado').length;
+    const nCanc=oss.filter(o=>o.status==='cancelado').length;
     const mid='mes_'+key.replace('-','_');
     return `<div class="mes-group">
       <div class="mes-header" onclick="document.getElementById('${mid}').classList.toggle('open')">
         <div class="mes-title">📅 ${getMesLabel(key)}</div>
-        <div class="mes-stats">${nAprov>0?'🟢 '+nAprov+' aprovada'+(nAprov!==1?'s':''):''}${nAprov>0&&nRecus>0?' · ':''}${nRecus>0?'🔴 '+nRecus+' recusada'+(nRecus!==1?'s/canceladas':''):''}${nAprov>0?' · '+fmtMoeda(totalMes):''}</div>
+        <div class="mes-stats">${nAprov>0?'🟢 '+nAprov+' aprovada'+(nAprov!==1?'s':''):''}${nAprov>0&&nCanc>0?' · ':''}${nCanc>0?'🔴 '+nCanc+' cancelada'+(nCanc!==1?'s':''):''}${nAprov>0?' · '+fmtMoeda(totalMes):''}</div>
       </div>
       <div class="mes-body" id="${mid}">
         ${oss.map(o=>`${renderOS(o,false,true)}<div style="margin-bottom:4px;"><button class="btn" style="padding:5px 10px;font-size:11px;background:rgba(100,180,255,.12);color:var(--sky);border:1px solid rgba(100,180,255,.3);margin-top:-4px;" onclick="abrirCompartilhar(${o.id})">📤 Compartilhar</button></div>`).join('')}
@@ -2763,12 +2813,15 @@ function updStats(){
   const amanhStr=amanha();
   const em7=new Date();em7.setDate(em7.getDate()+7);
   const em7str=em7.getFullYear()+'-'+String(em7.getMonth()+1).padStart(2,'0')+'-'+String(em7.getDate()).padStart(2,'0');
-  const agSem=agendamentos.filter(a=>a.data>=hj&&a.data<=em7str&&a.status!=='cancelado');
+  // Filtrar agendamentos por OS aprovada
+  const osAprovMapa={};
+  ordens.filter(o=>o.status==='aprovado').forEach(o=>{osAprovMapa[o.id]=true;});
+  const agSem=agendamentos.filter(a=>a.data>=hj&&a.data<=em7str&&osAprovMapa[a.osId]);
   document.getElementById('s-agenda-sem').textContent=agSem.length;
   const hcHoje=document.getElementById('hc-hoje');
   if(hcHoje){
-    const agHoje=agendamentos.filter(a=>a.data===hj&&a.status!=='cancelado').length;
-    const agAmanha=agendamentos.filter(a=>a.data===amanhStr&&a.status!=='cancelado').length;
+    const agHoje=agendamentos.filter(a=>a.data===hj&&osAprovMapa[a.osId]).length;
+    const agAmanha=agendamentos.filter(a=>a.data===amanhStr&&osAprovMapa[a.osId]).length;
     hcHoje.textContent=agHoje;
     document.getElementById('hc-pend').textContent=ordens.filter(o=>o.status==='pendente').length;
     document.getElementById('hc-cli').textContent=clientes.length;
@@ -2985,8 +3038,12 @@ function duplicarOS(id){
     id:Date.now(),
     numero:osCounter,
     status:'pendente',
+    executado:false,
     dataCriacao:new Date().toISOString(),
     dataFechamento:undefined,
+    dataAprovacao:undefined,
+    dataCancelamento:undefined,
+    dataExecucao:undefined,
     mes:getMesKey(),
     dataOrc:hoje(),
     dataServico:undefined,
@@ -3082,7 +3139,13 @@ function rendCardHoje(){
   const now=new Date();
   const elData=document.getElementById('ag-hoje-data');
   if(elData)elData.textContent=DIAS[now.getDay()]+', '+now.getDate()+'/'+String(now.getMonth()+1).padStart(2,'0');
-  const agHoje=agendamentos.filter(a=>a.data===hj&&a.status!=='cancelado').sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
+  // Mostrar apenas agendamentos de hoje de OS não canceladas
+  const todasOSMapa={};
+  [...ordens,...historico.flatMap(m=>m.ordens||[])].forEach(o=>{todasOSMapa[o.id]=o;});
+  const agHoje=agendamentos.filter(a=>{
+    const os=todasOSMapa[a.osId];
+    return a.data===hj&&os&&os.status!=='cancelado';
+  }).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
   const el=document.getElementById('ag-hoje-lista');
   if(!el)return;
   if(!agHoje.length){
@@ -3090,8 +3153,10 @@ function rendCardHoje(){
     return;
   }
   el.innerHTML=agHoje.map(a=>{
-    const stCor=a.status==='confirmado'?'var(--green)':'var(--orange)';
-    const stIco=a.status==='confirmado'?'🟢':'🟡';
+    const os=todasOSMapa[a.osId];
+    const executado=os&&os.executado===true;
+    const stCor=executado?'var(--sky)':'var(--green)';
+    const stIco=executado?'✅':'🟢';
     return `<div class="ag-hoje-item">
       <div>
         <div class="ag-hoje-nome">${a.cliNome}</div>
@@ -3105,9 +3170,9 @@ function rendCardHoje(){
 let filtroMesAtual='todos';
 function setFiltroMes(status,btn){
   filtroMesAtual=status;
-  const classMap={todos:'ativo',aprovado:'ativo-aprovado',pendente:'ativo-pendente',recusado:'ativo-recusado',cancelado:'ativo-cancelado'};
+  const classMap={todos:'ativo',aprovado:'ativo-aprovado',pendente:'ativo-pendente',cancelado:'ativo-cancelado'};
   document.querySelectorAll('.filtro-btn').forEach(b=>{
-    b.classList.remove('ativo','ativo-aprovado','ativo-pendente','ativo-recusado','ativo-cancelado');
+    b.classList.remove('ativo','ativo-aprovado','ativo-pendente','ativo-cancelado');
   });
   if(btn)btn.classList.add(classMap[status]||'ativo');
   rendHist(true);
@@ -3218,6 +3283,33 @@ function cancelarAg(agId){
     toast('❌ Agendamento cancelado');
   });
 }
+
+function marcarExecutado(agId){
+  const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
+  const os=ordens.find(o=>o.id===ag.osId);if(!os)return;
+  confirmar('✅ Marcar como Executado','Tem certeza que deseja marcar este serviço como executado?','✅ Confirmar','btn-g',()=>{
+    os.executado=true;
+    os.dataExecucao=new Date().toISOString();
+    salvarLocal();
+    fecharModal('modal-ag-dia');
+    rendAgenda();
+    toast('✅ Serviço marcado como executado!');
+  });
+}
+
+function cancelarOSdaAgenda(agId){
+  const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
+  const os=ordens.find(o=>o.id===ag.osId);if(!os)return;
+  confirmar('🔴 Cancelar OS','Tem certeza que deseja cancelar esta OS? Ela será removida do Faturamento.','🔴 Cancelar OS','btn-d',()=>{
+    os.status='cancelado';
+    os.dataCancelamento=new Date().toISOString();
+    delete os.dataFechamento;
+    salvarLocal();updStats();rendFaturamento();
+    fecharModal('modal-ag-dia');
+    rendAgenda();
+    toast('🔴 OS cancelada.');
+  });
+}
 function excluirAg(agId){
   confirmar('🗑️ Excluir Agendamento','Excluir permanentemente este agendamento?','🗑️ Excluir','btn-d',()=>{
     agendamentos=agendamentos.filter(a=>a.id!==agId);
@@ -3253,16 +3345,25 @@ function remarcarAg(agId){
 function updStatus(id,s){
   const os=ordens.find(o=>o.id===id);if(!os)return;
   const antigo=os.status;
+  if(s===antigo)return;
+
   if(s==='aprovado'){
-    // Se já tem data/hora salva, aprovar direto
+    // Se já tem data/hora salva, confirmar e aprovar
     if(os.dataServico&&os.horaServico){
-      os.status='aprovado';
-      os.mes=getMesKey(); // mês real do fechamento
-      os.dataFechamento=new Date().toISOString();
-      agendamentos=agendamentos.filter(a=>a.osId!==os.id);
-      criarAgendamento(os,os.dataServico,os.horaServico);
-      salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
-      toast('🟢 Aprovado! Adicionado à Agenda e Faturamento.');
+      confirmar('🟢 Confirmar Aprovação','Tem certeza que deseja aprovar esta OS? Ela entrará na Agenda e no Faturamento.','✅ Aprovar','btn-g',()=>{
+        os.status='aprovado';
+        os.executado=false;
+        os.mes=getMesKey();
+        os.dataFechamento=new Date().toISOString();
+        os.dataAprovacao=new Date().toISOString();
+        agendamentos=agendamentos.filter(a=>a.osId!==os.id);
+        criarAgendamento(os,os.dataServico,os.horaServico);
+        salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
+        toast('🟢 Aprovado! Adicionado à Agenda e Faturamento.');
+      });
+      // Resetar select visual enquanto aguarda confirmação
+      const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
+      if(sel)sel.value=antigo;
       return;
     }
     // Abrir modal para informar data/hora
@@ -3273,8 +3374,10 @@ function updStatus(id,s){
       const horaAg=document.getElementById('modal-aprovar-hora').value;
       if(!dataAg||!horaAg){toast('⚠️ Informe a data e horário do serviço.',true);return;}
       os.status='aprovado';
-      os.mes=getMesKey(); // mês real do fechamento
+      os.executado=false;
+      os.mes=getMesKey();
       os.dataFechamento=new Date().toISOString();
+      os.dataAprovacao=new Date().toISOString();
       os.dataServico=dataAg;
       os.horaServico=horaAg;
       const pgtoEl=document.getElementById('modal-aprovar-pgto');
@@ -3285,20 +3388,42 @@ function updStatus(id,s){
       fecharModal('modal-aprovar-os');
       toast('🟢 Aprovado! Adicionado à Agenda e Faturamento.');
     };
-    // Resetar select visual
     const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
     if(sel)sel.value=antigo;
     abrirModal('modal-aprovar-os');
     return;
   }
-  os.status=s;
-  if(antigo==='aprovado'){
-    agendamentos=agendamentos.filter(a=>a.osId!==os.id);
-    delete os.dataFechamento;
+
+  if(s==='cancelado'){
+    confirmar('🔴 Confirmar Cancelamento','Tem certeza que deseja cancelar esta OS?','🔴 Cancelar OS','btn-d',()=>{
+      os.status='cancelado';
+      os.dataCancelamento=new Date().toISOString();
+      if(antigo==='aprovado'){
+        agendamentos=agendamentos.filter(a=>a.osId!==os.id);
+        delete os.dataFechamento;
+        delete os.dataAprovacao;
+      }
+      salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
+      toast('🔴 OS cancelada.');
+    });
+    const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
+    if(sel)sel.value=antigo;
+    return;
   }
-  salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
-  const msgs={recusado:'🔴 Recusado.',cancelado:'⚫ Cancelado.',pendente:'🟡 Pendente.'};
-  toast(msgs[s]||'✅ Status atualizado.');
+
+  // PENDENTE
+  confirmar('🟡 Alterar Status','Tem certeza que deseja alterar esta OS?','🟡 Confirmar','btn-o',()=>{
+    os.status=s;
+    if(antigo==='aprovado'){
+      agendamentos=agendamentos.filter(a=>a.osId!==os.id);
+      delete os.dataFechamento;
+      delete os.dataAprovacao;
+    }
+    salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
+    toast('🟡 OS voltou para Pendente.');
+  });
+  const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
+  if(sel)sel.value=antigo;
 }
 function cadastrarNovoRapido(nome){
   document.getElementById('modal-cad-rapido-nome-label').textContent='Cadastrando: "'+nome+'"';
@@ -3724,9 +3849,11 @@ function verificarLembretesAmanha() {
   amanha.setDate(amanha.getDate() + 1);
   const amanhaStr = amanha.toISOString().split('T')[0];
 
+  const osAprovMapaLemb={};
+  ordens.filter(o=>o.status==='aprovado').forEach(o=>{osAprovMapaLemb[o.id]=true;});
   const agsAmanha = agendamentos.filter(a =>
     a.data === amanhaStr &&
-    a.status !== 'cancelado' &&
+    osAprovMapaLemb[a.osId] &&
     (a.cliWpp || '').replace(/\D/g, '').length >= 10
   );
 
