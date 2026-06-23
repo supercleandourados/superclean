@@ -1334,8 +1334,7 @@ function init(){
     rendTipos();
     rendPrecosTabela();
     rendProxServicos();
-    rendFaturamento();
-    rendHist();
+    // rendFaturamento e rendHist são lazy — renderizam quando o usuário abre as abas
     setTimeout(()=>calcReativacao(true), 800);
     setTimeout(()=>verificarBackupAutomatico(), 2000);
     setTimeout(()=>verificarMesNovo(), 3000);
@@ -1361,25 +1360,57 @@ function init(){
 // Flag para controlar quando clientes mudaram (evita salvar na coleção desnecessariamente)
 let _clientesMudaram = false;
 
-function salvarLocal(clientesMudaram){
-  if(typeof invalidarCatCache==='function') invalidarCatCache();
-  _statsReatKey = '';
-  localStorage.setItem('sc_clientes',   JSON.stringify(clientes));
-  localStorage.setItem('sc_ordens',     JSON.stringify(ordens));
-  localStorage.setItem('sc_historico',  JSON.stringify(historico));
-  localStorage.setItem('sc_agenda',     JSON.stringify(agendamentos));
-  localStorage.setItem('sc_tipos',      JSON.stringify(tipos));
-  localStorage.setItem('sc_precos',     JSON.stringify(precos));
-  // sc_mes_atual não é mais usado — mês é sempre o calendário real
-  localStorage.setItem('sc_os_counter', String(osCounter));
-  // Timestamp local para proteção anti-sobrescrita do Firebase
-  localStorage.setItem('sc_local_ts',   String(Date.now()));
-  // Salvar dados operacionais sempre
-  if (window.fbSalvar) window.fbSalvar();
-  // Salvar clientes na coleção separada só quando mudam
-  if (clientesMudaram && window.fbSalvarClientes) {
-    window.fbSalvarClientes();
+// ============ STORAGE GUARD — proteção contra quota excedida ============
+function _lsSet(chave, valor) {
+  try {
+    localStorage.setItem(chave, valor);
+  } catch(e) {
+    // QuotaExceededError — localStorage cheio
+    if(e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+      _alertarQuotaLS();
+    } else {
+      console.warn('localStorage erro:', chave, e);
+    }
   }
+}
+let _quotaAlertado = false;
+function _alertarQuotaLS() {
+  if(_quotaAlertado) return;
+  _quotaAlertado = true;
+  // Dados estão seguros no Firebase — apenas avisamos
+  toast('⚠️ Armazenamento local quase cheio! Faça um backup agora.', true);
+  setTimeout(() => {
+    confirmar(
+      '⚠️ Armazenamento Local Cheio',
+      'O espaço local do dispositivo está cheio. Seus dados estão seguros na nuvem (Firebase), mas recomendamos fazer um backup imediatamente e limpar dados antigos.',
+      '📦 Fazer Backup Agora', 'btn-g',
+      () => exportarJSON(false)
+    );
+    _quotaAlertado = false; // reset para próxima vez
+  }, 500);
+}
+
+// ============ salvarLocal — versão granular ============
+// opts: true/false (legado = salva tudo) | { ordens, agenda, clientes, historico, tipos, precos, counter }
+function salvarLocal(opts) {
+  if(typeof invalidarCatCache === 'function') invalidarCatCache();
+  _statsReatKey = '';
+
+  const tudo = (opts === true || opts === undefined || opts === false);
+  const clientesMudaram = tudo ? (opts === true) : (opts?.clientes === true);
+
+  _lsSet('sc_local_ts', String(Date.now()));
+
+  if(tudo || opts?.clientes)  _lsSet('sc_clientes',   JSON.stringify(clientes));
+  if(tudo || opts?.ordens)    _lsSet('sc_ordens',     JSON.stringify(ordens));
+  if(tudo || opts?.historico) _lsSet('sc_historico',  JSON.stringify(historico));
+  if(tudo || opts?.agenda)    _lsSet('sc_agenda',     JSON.stringify(agendamentos));
+  if(tudo || opts?.tipos)     _lsSet('sc_tipos',      JSON.stringify(tipos));
+  if(tudo || opts?.precos)    _lsSet('sc_precos',     JSON.stringify(precos));
+  if(tudo || opts?.counter)   _lsSet('sc_os_counter', String(osCounter));
+
+  if(window.fbSalvar) window.fbSalvar();
+  if(clientesMudaram && window.fbSalvarClientes) window.fbSalvarClientes();
 }
 function _salvarClienteCommon(nome, wpp, end, cbClear){
   if(!nome){toast('⚠️ Nome obrigatório',true);return false;}
@@ -1888,7 +1919,7 @@ function salvarOS(){
     dataServico:dataServPrev||undefined,
     horaServico:horaServPrev||undefined,
   };
-  ordens.push(os);salvarLocal();
+  ordens.push(os);salvarLocal({ordens:true,counter:true});
   toast('✅ OS #'+String(osCounter).padStart(4,'0')+' salva!');
   setTimeout(()=>abrirCompartilhar(os.id), 300);
   limparCliente();
@@ -1975,7 +2006,7 @@ function updStatusShare(){
       delete os.motivoRecusa;
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
       criarAgendamento(os,dataAg,horaAg);
-      salvarLocal();updStats();rendProxServicos();rendFaturamento();
+      salvarLocal({ordens:true,agenda:true});updStats();rendProxServicos();rendFaturamento();
       toast('🟢 Aprovado! Adicionado à Agenda e Faturamento automaticamente.');
     });
     // Resetar select enquanto aguarda confirmação
@@ -1992,7 +2023,7 @@ function updStatusShare(){
         agendamentos=agendamentos.filter(a=>a.osId!==os.id);
         delete os.dataFechamento;
       }
-      salvarLocal();updStats();rendProxServicos();rendFaturamento();
+      salvarLocal({ordens:true,agenda:true});updStats();rendProxServicos();rendFaturamento();
       toast('🔴 OS cancelada — removida da Agenda e Faturamento.');
     });
     document.getElementById('share-status-sel').value=antigo;
@@ -2007,7 +2038,7 @@ function updStatusShare(){
       delete os.dataFechamento;
       delete os.dataAprovacao;
     }
-    salvarLocal();updStats();rendProxServicos();rendFaturamento();
+    salvarLocal({ordens:true,agenda:true});updStats();rendProxServicos();rendFaturamento();
     toast('🟡 OS voltou para Pendente.');
   });
   document.getElementById('share-status-sel').value=antigo;
@@ -2049,7 +2080,7 @@ function atualizarAgendamentoDia(){
   } else {
     criarAgendamento(os,data,hora);
   }
-  salvarLocal();
+  salvarLocal({agenda:true});
   toast('📅 Agendamento atualizado!');
 }
 
@@ -2662,7 +2693,7 @@ function fatVoltarPendente(osId){
       delete os.dataExecucao;
       // Remover agendamento vinculado
       agendamentos=agendamentos.filter(a=>String(a.osId)!==String(os.id));
-      salvarLocal();updStats();rendFaturamento();rendHist();rendProxServicos();
+      salvarLocal({ordens:true,agenda:true});updStats();rendFaturamento();rendHist();rendProxServicos();
       toast('↩️ OS voltou para Pendente e saiu do Faturamento.');
     }
   );
@@ -2678,7 +2709,7 @@ function fatExcluirOS(osId){
     ()=>{
       agendamentos=agendamentos.filter(a=>String(a.osId)!==String(os.id));
       ordens=ordens.filter(o=>String(o.id)!==String(osId));
-      salvarLocal();updStats();rendFaturamento();rendHist();rendProxServicos();
+      salvarLocal({ordens:true,agenda:true});updStats();rendFaturamento();rendHist();rendProxServicos();
       toast('🗑️ OS excluída permanentemente.');
     }
   );
@@ -2884,7 +2915,7 @@ function addTipo(){
   const v=inp.value.trim();
   if(!v){toast('⚠️ Digite um tipo',true);return;}
   if(tipos.includes(v)){toast('⚠️ Tipo já existe',true);return;}
-  tipos.push(v);salvarLocal();inp.value='';
+  tipos.push(v);salvarLocal({tipos:true});inp.value='';
   rendTipos();rendPrecosTabela();
   document.querySelectorAll('.item-srv').forEach(it=>{
     const sel=document.getElementById('tip_'+it.id);
@@ -2914,7 +2945,7 @@ function rendPrecosTabela(){
 function setPreco(tipo,srv,val){
   const v=parseFloat(val)||0;
   precos[tipo+'__'+srv]=v;
-  salvarLocal();
+  salvarLocal({precos:true});
 }
 let _statsReatCache = null;
 let _statsReatKey = '';
@@ -3165,7 +3196,7 @@ function duplicarOS(id){
     horaServico:undefined,
   };
   ordens.push(nova);
-  salvarLocal();rendHist();updStats();
+  salvarLocal({ordens:true,counter:true});rendHist();updStats();
   toast('📋 OS #'+String(nova.numero).padStart(4,'0')+' criada como duplicata!');
   setTimeout(()=>abrirCompartilhar(nova.id),300);
 }
@@ -3173,7 +3204,9 @@ function salvarMeta(){
   const v=parseFloat(document.getElementById('meta-input').value)||0;
   localStorage.setItem('sc_meta',String(v));
   window._sc.meta=v;
-  salvarLocal();
+  // meta salva diretamente no localStorage — não precisa serializar ordens/clientes
+  _lsSet('sc_meta', String(v));
+  if(window.fbSalvar) window.fbSalvar();
   rendMeta();
 }
 function rendMeta(){
@@ -3386,7 +3419,7 @@ function delOS(id){
     const numId=Number(id);
     agendamentos=agendamentos.filter(a=>a.osId!==numId);
     ordens=ordens.filter(o=>o.id!==numId);
-    salvarLocal();rendHist();updStats();rendProxServicos();rendFaturamento();
+    salvarLocal({ordens:true,agenda:true});rendHist();updStats();rendProxServicos();rendFaturamento();
     toast('🗑️ OS excluída');
   });
 }
@@ -3394,7 +3427,7 @@ function cancelarAg(agId){
   confirmar('❌ Cancelar Agendamento','Tem certeza que deseja cancelar este agendamento?','❌ Cancelar','btn-d',()=>{
     const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
     ag.status='cancelado';
-    salvarLocal();
+    salvarLocal({agenda:true});
     fecharModal('modal-ag-dia');
     rendAgenda();
     toast('❌ Agendamento cancelado');
@@ -3410,7 +3443,7 @@ function marcarExecutado(agId){
   confirmar('✅ Marcar como Executado','Tem certeza que deseja marcar este serviço como executado?','✅ Confirmar','btn-g',()=>{
     os.executado=true;
     os.dataExecucao=new Date().toISOString();
-    salvarLocal();
+    salvarLocal({ordens:true});
     fecharModal('modal-ag-dia');
     rendAgenda();
     toast('✅ Serviço marcado como executado!');
@@ -3426,7 +3459,7 @@ function desfazerExecutado(agId){
   confirmar('↩️ Desfazer Execução','Tem certeza que deseja reverter para "Agendado"? Use apenas em caso de imprevisto com o cliente.','↩️ Desfazer','btn-o',()=>{
     os.executado=false;
     delete os.dataExecucao;
-    salvarLocal();
+    salvarLocal({ordens:true});
     fecharModal('modal-ag-dia');
     rendAgenda();
     toast('↩️ Execução desfeita — serviço voltou para Agendado.');
@@ -3442,7 +3475,7 @@ function cancelarOSdaAgenda(agId){
     os.status='cancelado';
     os.dataCancelamento=new Date().toISOString();
     delete os.dataFechamento;
-    salvarLocal();updStats();rendFaturamento();
+    salvarLocal({ordens:true,agenda:true});updStats();rendFaturamento();
     fecharModal('modal-ag-dia');
     rendAgenda();
     toast('🔴 OS cancelada.');
@@ -3451,7 +3484,7 @@ function cancelarOSdaAgenda(agId){
 function excluirAg(agId){
   confirmar('🗑️ Excluir Agendamento','Excluir permanentemente este agendamento?','🗑️ Excluir','btn-d',()=>{
     agendamentos=agendamentos.filter(a=>String(a.id)!==String(agId));
-    salvarLocal();
+    salvarLocal({agenda:true});
     fecharModal('modal-ag-dia');
     rendAgenda();rendProxServicos();
     toast('🗑️ Agendamento excluído');
@@ -3459,7 +3492,7 @@ function excluirAg(agId){
 }
 function rmTipo(i){
   confirmar('🗑️ Remover Tipo',`Remover "${tipos[i]}"?`,'🗑️ Remover','btn-d',()=>{
-    tipos.splice(i,1);salvarLocal();
+    tipos.splice(i,1);salvarLocal({tipos:true});
     rendTipos();rendPrecosTabela();
     toast('🗑️ Tipo removido');
   });
@@ -3473,7 +3506,7 @@ function remarcarAg(agId){
     const novaHora=document.getElementById('modal-remarcar-hora').value;
     if(!novaData||!novaHora){toast('⚠️ Informe data e horário',true);return;}
     ag.data=novaData;ag.hora=novaHora;ag.status='confirmado';
-    salvarLocal();
+    salvarLocal({agenda:true});
     fecharModal('modal-remarcar');fecharModal('modal-ag-dia');
     rendAgenda();
     toast('📅 Agendamento remarcado!');
@@ -3496,7 +3529,7 @@ function updStatus(id,s){
         os.dataAprovacao=new Date().toISOString();
         agendamentos=agendamentos.filter(a=>a.osId!==os.id);
         criarAgendamento(os,os.dataServico,os.horaServico);
-        salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
+        salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
         toast('🟢 Aprovado! Adicionado à Agenda e Faturamento.');
       });
       // Resetar select visual enquanto aguarda confirmação
@@ -3522,7 +3555,7 @@ function updStatus(id,s){
       if(pgtoEl&&pgtoEl.value)os.formaPgto=pgtoEl.value;
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
       criarAgendamento(os,dataAg,horaAg);
-      salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
+      salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
       fecharModal('modal-aprovar-os');
       toast('🟢 Aprovado! Adicionado à Agenda e Faturamento.');
     };
@@ -3541,7 +3574,7 @@ function updStatus(id,s){
         delete os.dataFechamento;
         delete os.dataAprovacao;
       }
-      salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
+      salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
       toast('🔴 OS cancelada.');
     });
     const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
@@ -3557,7 +3590,7 @@ function updStatus(id,s){
       delete os.dataFechamento;
       delete os.dataAprovacao;
     }
-    salvarLocal();updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
+    salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
     toast('🟡 OS voltou para Pendente.');
   });
   const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
