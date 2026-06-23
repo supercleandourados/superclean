@@ -2640,7 +2640,48 @@ function rendFaturamento(){
         ${o.formaPgto?`<span style="font-size:10px;background:rgba(27,111,216,.12);color:var(--sky);border:1px solid rgba(27,111,216,.25);border-radius:4px;padding:1px 6px;">${o.formaPgto}</span>`:''}
         <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${o.itens?.map(i=>i.tipo).join(', ')||''}</span>
       </div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+        <button class="btn btn-o" style="padding:5px 10px;font-size:11px;color:var(--orange);border-color:rgba(255,140,0,.4);" onclick="fatVoltarPendente(${o.id})">↩️ Voltar Pendente</button>
+        <button class="btn btn-d" style="padding:5px 10px;font-size:11px;" onclick="fatExcluirOS(${o.id})">🗑️ Excluir OS</button>
+      </div>
     </div>`).join('');
+}
+
+function fatVoltarPendente(osId){
+  const os=ordens.find(o=>o.id===osId||String(o.id)===String(osId));
+  if(!os){toast('⚠️ OS não encontrada',true);return;}
+  confirmar(
+    '↩️ Voltar para Pendente',
+    `A OS #${String(os.numero).padStart(4,'0')} de ${os.cliNome} (${fmtMoeda(os.total)}) será removida do Faturamento e voltará para Orçamentos. Nenhum dado será apagado.`,
+    '↩️ Confirmar','btn-o',
+    ()=>{
+      os.status='pendente';
+      os.executado=false;
+      delete os.dataFechamento;
+      delete os.dataAprovacao;
+      delete os.dataExecucao;
+      // Remover agendamento vinculado
+      agendamentos=agendamentos.filter(a=>String(a.osId)!==String(os.id));
+      salvarLocal();updStats();rendFaturamento();rendHist();rendProxServicos();
+      toast('↩️ OS voltou para Pendente e saiu do Faturamento.');
+    }
+  );
+}
+
+function fatExcluirOS(osId){
+  const os=ordens.find(o=>o.id===osId||String(o.id)===String(osId));
+  if(!os){toast('⚠️ OS não encontrada',true);return;}
+  confirmar(
+    '🗑️ Excluir OS permanentemente',
+    `Excluir definitivamente a OS #${String(os.numero).padStart(4,'0')} de ${os.cliNome} (${fmtMoeda(os.total)})? Esta ação não pode ser desfeita.`,
+    '🗑️ Excluir','btn-d',
+    ()=>{
+      agendamentos=agendamentos.filter(a=>String(a.osId)!==String(os.id));
+      ordens=ordens.filter(o=>String(o.id)!==String(osId));
+      salvarLocal();updStats();rendFaturamento();rendHist();rendProxServicos();
+      toast('🗑️ OS excluída permanentemente.');
+    }
+  );
 }
 
 function rendGrafico(todasFech){
