@@ -274,7 +274,7 @@ select option{background:#0a1e38;}
 /* CALENDÁRIO */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:20px;}
 .cal-dow{text-align:center;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:6px 0;}
-.cal-day{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:8px 6px;min-height:70px;cursor:pointer;transition:border-color .2s;position:relative;}
+.cal-day{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:6px 5px;min-height:80px;cursor:pointer;transition:border-color .2s;position:relative;overflow:hidden;}
 .cal-day:hover{border-color:rgba(42,171,238,.4);}
 .cal-day.today{border-color:var(--sky);background:rgba(42,171,238,.07);}
 .cal-day.outro-mes{opacity:.35;}
@@ -284,6 +284,9 @@ select option{background:#0a1e38;}
 .cal-badge{font-size:9px;font-weight:700;background:rgba(27,111,216,.3);color:var(--sky);border-radius:4px;padding:1px 5px;display:block;text-align:center;margin-bottom:2px;}
 .cal-badge.conf{background:rgba(76,175,34,.25);color:var(--green);}
 .cal-badge.pend{background:rgba(255,140,0,.25);color:var(--orange);}
+.cal-badge.exec-badge{background:rgba(42,171,238,.25);color:var(--sky);}
+.cal-badge.canc-badge{background:rgba(229,57,53,.15);color:var(--red);}
+.cal-badge.val-badge{background:rgba(76,175,34,.18);color:var(--green);font-size:10px;font-weight:800;margin-top:1px;}
 .cal-empty{background:transparent;border:none;cursor:default;}
 .cal-empty:hover{border:none;}
 /* LISTA AGENDAMENTOS DO DIA */
@@ -2394,35 +2397,43 @@ function rendCalendario(ano,mes,agsMes){
     mapaAg[d].push(ag);
   });
 
-  // Mapa OS para status (para badges corretos)
+  // Mapa OS para status
   const todasOSMapaCal={};
   [...ordens,...historico.flatMap(m=>m.ordens||[])].forEach(o=>{todasOSMapaCal[o.id]=o;});
 
   let html='';
-  // Dias do mês anterior
   for(let i=primeiroDia-1;i>=0;i--){
     html+=`<div class="cal-day outro-mes"><div class="cal-day-num">${diasAntMes-i}</div></div>`;
   }
-  // Dias do mês
   for(let d=1;d<=diasNoMes;d++){
     const dStr=ano+'-'+String(mes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const isHoje=dStr===hoje_str;
     const ags=mapaAg[d]||[];
     const temAg=ags.length>0;
     const isFer=!!feriados[dStr];
-    // Classificar por status da OS
-    const cAgendados=ags.filter(a=>{const os=todasOSMapaCal[a.osId];return os&&os.status==='aprovado'&&!os.executado;}).length;
-    const cExec=ags.filter(a=>{const os=todasOSMapaCal[a.osId];return os&&os.executado===true;}).length;
+
+    // Classificar serviços do dia por status
+    const listaAprov=ags.filter(a=>{const os=todasOSMapaCal[a.osId];return os&&os.status==='aprovado'&&!os.executado;});
+    const listaExec=ags.filter(a=>{const os=todasOSMapaCal[a.osId];return os&&(os.executado===true||(os.status==='aprovado'&&a._virtual));});
+    const listaCanc=ags.filter(a=>{const os=todasOSMapaCal[a.osId];return os&&os.status==='cancelado';});
+    const listaPend=ags.filter(a=>{const os=todasOSMapaCal[a.osId];return os&&os.status==='pendente';});
+
+    // Valor total do dia (aprovados + executados)
+    const valorDia=[...listaAprov,...listaExec].reduce((s,a)=>s+parseFloat(a.valor||0),0);
+    const valorFmt=valorDia>0?(valorDia>=1000?'R$'+(valorDia/1000).toFixed(1)+'k':'R$'+valorDia.toFixed(0)):'';
+
     let badges='';
-    if(isFer)badges+=`<span style="font-size:9px;color:var(--orange);display:block;line-height:1.1;">${feriados[dStr].split(' ')[0]}</span>`;
-    if(cAgendados)badges+=`<span class="cal-badge conf">${cAgendados} ag.</span>`;
-    if(cExec)badges+=`<span class="cal-badge" style="background:rgba(42,171,238,.25);color:var(--sky);">${cExec} ex.</span>`;
-    if(ags.length&&!cAgendados&&!cExec)badges+=`<span class="cal-badge">${ags.length} serv.</span>`;
+    if(isFer) badges+=`<span style="font-size:8px;color:var(--orange);display:block;line-height:1.2;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${feriados[dStr].split(' ')[0]}</span>`;
+    if(listaAprov.length) badges+=`<span class="cal-badge conf">${listaAprov.length} aprov.</span>`;
+    if(listaExec.length)  badges+=`<span class="cal-badge exec-badge">${listaExec.length} exec.</span>`;
+    if(listaPend.length)  badges+=`<span class="cal-badge pend">${listaPend.length} pend.</span>`;
+    if(listaCanc.length)  badges+=`<span class="cal-badge canc-badge">${listaCanc.length} canc.</span>`;
+    if(valorFmt)          badges+=`<span class="cal-badge val-badge">${valorFmt}</span>`;
+
     html+=`<div class="cal-day${isHoje?' today':''}${temAg?' tem-agenda':''}${isFer?' feriado':''}" onclick="abrirDiaAgenda('${dStr}',${d})">
       <div class="cal-day-num">${d}</div>${badges}
     </div>`;
   }
-  // Completar grade
   const total=primeiroDia+diasNoMes;
   const resto=total%7===0?0:7-(total%7);
   for(let d=1;d<=resto;d++){
@@ -2430,7 +2441,7 @@ function rendCalendario(ano,mes,agsMes){
   }
   cal.innerHTML=html;
 
-  // Lista de feriados do mês na agenda
+  // Feriados do mês
   const ferDoMes=Object.entries(feriados).filter(([dt])=>{
     const [ay,am]=dt.split('-');
     return parseInt(ay)===ano&&parseInt(am)-1===mes;
@@ -3350,8 +3361,11 @@ function cancelarAg(agId){
 }
 
 function marcarExecutado(agId){
-  const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
-  const os=ordens.find(o=>o.id===ag.osId);if(!os)return;
+  // Busca robusta — id pode ser string ou number
+  const ag=agendamentos.find(a=>String(a.id)===String(agId));
+  if(!ag){toast('⚠️ Agendamento não encontrado',true);return;}
+  const os=ordens.find(o=>o.id===ag.osId||String(o.id)===String(ag.osId));
+  if(!os){toast('⚠️ OS não encontrada',true);return;}
   confirmar('✅ Marcar como Executado','Tem certeza que deseja marcar este serviço como executado?','✅ Confirmar','btn-g',()=>{
     os.executado=true;
     os.dataExecucao=new Date().toISOString();
@@ -3363,9 +3377,12 @@ function marcarExecutado(agId){
 }
 
 function desfazerExecutado(agId){
-  const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
-  const os=ordens.find(o=>o.id===ag.osId);if(!os)return;
-  confirmar('↩️ Desfazer Execução','Tem certeza que deseja reverter este serviço para "Agendado"? Use apenas em caso de imprevisto.','↩️ Desfazer','btn-o',()=>{
+  // Busca robusta — id pode ser string ou number
+  const ag=agendamentos.find(a=>String(a.id)===String(agId));
+  if(!ag){toast('⚠️ Agendamento não encontrado',true);return;}
+  const os=ordens.find(o=>o.id===ag.osId||String(o.id)===String(ag.osId));
+  if(!os){toast('⚠️ OS não encontrada',true);return;}
+  confirmar('↩️ Desfazer Execução','Tem certeza que deseja reverter para "Agendado"? Use apenas em caso de imprevisto com o cliente.','↩️ Desfazer','btn-o',()=>{
     os.executado=false;
     delete os.dataExecucao;
     salvarLocal();
@@ -3376,8 +3393,10 @@ function desfazerExecutado(agId){
 }
 
 function cancelarOSdaAgenda(agId){
-  const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
-  const os=ordens.find(o=>o.id===ag.osId);if(!os)return;
+  const ag=agendamentos.find(a=>String(a.id)===String(agId));
+  if(!ag){toast('⚠️ Agendamento não encontrado',true);return;}
+  const os=ordens.find(o=>o.id===ag.osId||String(o.id)===String(ag.osId));
+  if(!os){toast('⚠️ OS não encontrada',true);return;}
   confirmar('🔴 Cancelar OS','Tem certeza que deseja cancelar esta OS? Ela será removida do Faturamento.','🔴 Cancelar OS','btn-d',()=>{
     os.status='cancelado';
     os.dataCancelamento=new Date().toISOString();
@@ -3390,7 +3409,7 @@ function cancelarOSdaAgenda(agId){
 }
 function excluirAg(agId){
   confirmar('🗑️ Excluir Agendamento','Excluir permanentemente este agendamento?','🗑️ Excluir','btn-d',()=>{
-    agendamentos=agendamentos.filter(a=>a.id!==agId);
+    agendamentos=agendamentos.filter(a=>String(a.id)!==String(agId));
     salvarLocal();
     fecharModal('modal-ag-dia');
     rendAgenda();rendProxServicos();
@@ -3405,7 +3424,7 @@ function rmTipo(i){
   });
 }
 function remarcarAg(agId){
-  const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
+  const ag=agendamentos.find(a=>String(a.id)===String(agId));if(!ag)return;
   document.getElementById('modal-remarcar-data').value=ag.data||today();
   document.getElementById('modal-remarcar-hora').value=ag.hora||'08:00';
   document.getElementById('modal-remarcar-ok').onclick=()=>{
@@ -3416,7 +3435,7 @@ function remarcarAg(agId){
     salvarLocal();
     fecharModal('modal-remarcar');fecharModal('modal-ag-dia');
     rendAgenda();
-    toast('📅 Agendamento remarcado e confirmado!');
+    toast('📅 Agendamento remarcado!');
   };
   abrirModal('modal-remarcar');
 }
