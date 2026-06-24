@@ -3207,7 +3207,8 @@ function rendProxServicos(){
   ordens.forEach(o=>{todasOSMapaProx[o.id]=o;});
   const prox=agendamentos.filter(a=>{
     const os=todasOSMapaProx[a.osId];
-    return a.data>=hj&&os&&os.status==='aprovado';
+    const dRef=a.data2&&a.data2>=hj?a.data2:a.data; // usa a data mais relevante futura
+    return dRef>=hj&&os&&os.status==='aprovado';
   })
     .sort((a,b)=>a.data.localeCompare(b.data)||(a.hora||'').localeCompare(b.hora||''))
     .slice(0,5);
@@ -3559,15 +3560,15 @@ function updStats(){
   const amanhStr=amanha();
   const em7=new Date();em7.setDate(em7.getDate()+7);
   const em7str=em7.getFullYear()+'-'+String(em7.getMonth()+1).padStart(2,'0')+'-'+String(em7.getDate()).padStart(2,'0');
-  // Filtrar agendamentos por OS aprovada
+  // Filtrar agendamentos por OS aprovada (Dia 1 OU Dia 2 dentro da janela)
   const osAprovMapa={};
   ordens.filter(o=>o.status==='aprovado').forEach(o=>{osAprovMapa[o.id]=true;});
-  const agSem=agendamentos.filter(a=>a.data>=hj&&a.data<=em7str&&osAprovMapa[a.osId]);
+  const agSem=agendamentos.filter(a=>(a.data>=hj&&a.data<=em7str||a.data2>=hj&&a.data2<=em7str)&&osAprovMapa[a.osId]);
   document.getElementById('s-agenda-sem').textContent=agSem.length;
   const hcHoje=document.getElementById('hc-hoje');
   if(hcHoje){
-    const agHoje=agendamentos.filter(a=>a.data===hj&&osAprovMapa[a.osId]).length;
-    const agAmanha=agendamentos.filter(a=>a.data===amanhStr&&osAprovMapa[a.osId]).length;
+    const agHoje=agendamentos.filter(a=>(a.data===hj||a.data2===hj)&&osAprovMapa[a.osId]).length;
+    const agAmanha=agendamentos.filter(a=>(a.data===amanhStr||a.data2===amanhStr)&&osAprovMapa[a.osId]).length;
     hcHoje.textContent=agHoje;
     document.getElementById('hc-pend').textContent=ordens.filter(o=>o.status==='pendente').length;
     document.getElementById('hc-cli').textContent=clientes.length;
@@ -3685,27 +3686,37 @@ function rendCalendarioHome(){
   const diasAntMes=new Date(homeCalAno,homeCalMes,0).getDate();
   const key=homeCalAno+'-'+String(homeCalMes+1).padStart(2,'0');
 
-  // Agendamentos do mês — filtrar por OS não cancelada
+  // Agendamentos do mês — filtrar por OS não cancelada (Dia 1 OU Dia 2)
   const todasOSMapaHome={};
   getTodasOS().forEach(o=>{todasOSMapaHome[o.id]=o;});
   const agsMes=agendamentos.filter(a=>{
-    if(!a.data||!a.data.startsWith(key))return false;
     const os=todasOSMapaHome[a.osId];
-    return os&&os.status!=='cancelado';
+    if(!os||os.status==='cancelado')return false;
+    return (a.data&&a.data.startsWith(key))||(a.data2&&a.data2.startsWith(key));
   });
 
   // Mapa: dia → {agendados, executados, valor}
   const mapaAg={};
   agsMes.forEach(ag=>{
-    const d=parseInt((ag.data||'').split('-')[2]);
-    if(!mapaAg[d])mapaAg[d]={ag:0,ex:0,val:0};
     const os=todasOSMapaHome[ag.osId];
-    if(os&&os.executado===true){
-      mapaAg[d].ex++;
-      mapaAg[d].val+=parseFloat(ag.valor||0);
-    } else {
-      mapaAg[d].ag++;
-      mapaAg[d].val+=parseFloat(ag.valor||0);
+    const isExec=os&&os.executado===true;
+
+    // Dia 1
+    const d1=parseInt((ag.data||'').split('-')[2]);
+    if(ag.data&&ag.data.startsWith(key)&&d1){
+      if(!mapaAg[d1])mapaAg[d1]={ag:0,ex:0,val:0};
+      if(isExec){ mapaAg[d1].ex++; } else { mapaAg[d1].ag++; }
+      mapaAg[d1].val+=parseFloat(ag.valor||0);
+    }
+
+    // Dia 2
+    if(ag.data2&&ag.data2.startsWith(key)){
+      const d2=parseInt(ag.data2.split('-')[2]);
+      if(d2){
+        if(!mapaAg[d2])mapaAg[d2]={ag:0,ex:0,val:0};
+        if(isExec){ mapaAg[d2].ex++; } else { mapaAg[d2].ag++; }
+        // Não somar valor no Dia 2 para não duplicar o faturamento
+      }
     }
   });
 
@@ -3932,12 +3943,12 @@ function rendCardHoje(){
   const now=new Date();
   const elData=document.getElementById('ag-hoje-data');
   if(elData)elData.textContent=DIAS[now.getDay()]+', '+now.getDate()+'/'+String(now.getMonth()+1).padStart(2,'0');
-  // Mostrar apenas agendamentos de hoje de OS não canceladas
+  // Mostrar apenas agendamentos de hoje de OS não canceladas (Dia 1 OU Dia 2)
   const todasOSMapa={};
   getTodasOS().forEach(o=>{todasOSMapa[o.id]=o;});
   const agHoje=agendamentos.filter(a=>{
     const os=todasOSMapa[a.osId];
-    return a.data===hj&&os&&os.status!=='cancelado';
+    return (a.data===hj||a.data2===hj)&&os&&os.status!=='cancelado';
   }).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
   const el=document.getElementById('ag-hoje-lista');
   if(!el)return;
@@ -5091,7 +5102,7 @@ function verificarLembretesAmanha() {
   const osAprovMapaLemb={};
   ordens.filter(o=>o.status==='aprovado').forEach(o=>{osAprovMapaLemb[o.id]=true;});
   const agsAmanha = agendamentos.filter(a =>
-    a.data === amanhaStr &&
+    (a.data === amanhaStr || a.data2 === amanhaStr) &&
     osAprovMapaLemb[a.osId] &&
     (a.cliWpp || '').replace(/\D/g, '').length >= 10
   );
