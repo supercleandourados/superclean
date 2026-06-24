@@ -1052,7 +1052,23 @@ select option{background:#0a1e38;}
             <option value="Cartão 5x">💳 Cartão 5x</option>
           </select>
         </div>
-        <div style="font-size:11px;color:var(--muted);">📌 Ao salvar, o serviço entra automaticamente na Agenda e no Faturamento.</div>
+        <!-- CAMPO DIA 2 — serviços de 2 dias -->
+        <div class="field" id="share-data2-wrap" style="margin-top:12px;">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;">
+            <input type="checkbox" id="share-habilitar-dia2" onchange="toggleDia2()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--sky);">
+            <span>📅 Serviço de 2 dias</span>
+          </label>
+        </div>
+        <div id="share-dia2-bloco" style="display:none;margin-top:8px;">
+          <div class="field" style="margin-bottom:4px;">
+            <label>Dia 2 (conclusão do serviço)</label>
+            <input type="date" id="share-data2-ag">
+          </div>
+          <div style="font-size:11px;color:var(--sky);margin-top:4px;background:rgba(42,171,238,.08);border:1px solid rgba(42,171,238,.2);border-radius:6px;padding:6px 10px;">
+            💡 O cliente aparecerá nos dois dias no calendário
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:8px;">📌 Ao salvar, o serviço entra automaticamente na Agenda e no Faturamento.</div>
       </div>
     </div>
 
@@ -2316,9 +2332,29 @@ function abrirCompartilhar(osId){
   if(agExist){
     document.getElementById('share-data-ag').value=agExist.data||os.dataServico||hoje();
     document.getElementById('share-hora-ag').value=agExist.hora||os.horaServico||'08:00';
+    // Pré-preencher Dia 2 se existir
+    const dia2Hab=document.getElementById('share-habilitar-dia2');
+    const dia2Bloco=document.getElementById('share-dia2-bloco');
+    const dia2Input=document.getElementById('share-data2-ag');
+    if(agExist.data2){
+      dia2Hab.checked=true;
+      dia2Bloco.style.display='block';
+      dia2Input.value=agExist.data2;
+    } else {
+      dia2Hab.checked=false;
+      dia2Bloco.style.display='none';
+      dia2Input.value='';
+    }
   } else {
     document.getElementById('share-data-ag').value=os.dataServico||os.dataOrc||hoje();
     document.getElementById('share-hora-ag').value=os.horaServico||'08:00';
+    // Resetar Dia 2
+    const dia2Hab=document.getElementById('share-habilitar-dia2');
+    const dia2Bloco=document.getElementById('share-dia2-bloco');
+    const dia2Input=document.getElementById('share-data2-ag');
+    if(dia2Hab)dia2Hab.checked=false;
+    if(dia2Bloco)dia2Bloco.style.display='none';
+    if(dia2Input)dia2Input.value='';
   }
   abrirModal('modal-share');
 }
@@ -2369,7 +2405,10 @@ function updStatusShare(){
       if(pgtoShareEl&&pgtoShareEl.value)os.formaPgto=pgtoShareEl.value;
       delete os.motivoRecusa;
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
-      criarAgendamento(os,dataAg,horaAg);
+      const data2ShareEl=document.getElementById('share-data2-ag');
+      const hab2Share=document.getElementById('share-habilitar-dia2')?.checked;
+      const data2Share=hab2Share&&data2ShareEl?.value&&data2ShareEl.value!==dataAg?data2ShareEl.value:null;
+      criarAgendamento(os,dataAg,horaAg,data2Share);
       salvarLocal({ordens:true,agenda:true});updStats();rendProxServicos();rendFaturamento();
       toast('🟢 Agendado! Serviço confirmado na Agenda.');
     });
@@ -2408,7 +2447,7 @@ function updStatusShare(){
   document.getElementById('share-status-sel').value=antigo;
 }
 
-function criarAgendamento(os, data, hora){
+function criarAgendamento(os, data, hora, data2){
   // Verifica se já existe agendamento para esta OS
   if(agendamentos.find(a=>a.osId===os.id))return;
   const ag={
@@ -2420,6 +2459,7 @@ function criarAgendamento(os, data, hora){
     cliWpp:os.cliWpp,
     cliEnd:os.localServico||os.cliEnd, // usa local do serviço se definido
     data:data,
+    data2:(data2&&data2!==data)?data2:null, // Dia 2 opcional — nulo se vazio ou igual ao Dia 1
     hora:hora||'08:00',
     valor:os.total,
     servico:os.itens.map(i=>i.tipo+' ('+i.srvNome+')').join(', '),
@@ -2437,12 +2477,16 @@ function atualizarAgendamentoDia(){
   if(!os||os.status!=='aprovado')return;
   const data=document.getElementById('share-data-ag').value;
   const hora=document.getElementById('share-hora-ag').value;
+  const hab2=document.getElementById('share-habilitar-dia2')?.checked;
+  const data2Val=document.getElementById('share-data2-ag')?.value||'';
+  const data2=hab2&&data2Val&&data2Val!==data?data2Val:null;
   const agIdx=agendamentos.findIndex(a=>a.osId===os.id);
   if(agIdx>=0){
     agendamentos[agIdx].data=data;
     agendamentos[agIdx].hora=hora;
+    agendamentos[agIdx].data2=data2||null;
   } else {
-    criarAgendamento(os,data,hora);
+    criarAgendamento(os,data,hora,data2);
   }
   salvarLocal({agenda:true});
   toast('📅 Agendamento atualizado!');
@@ -2723,8 +2767,10 @@ function agendaHoje(){
 }
 function getAgsMes(ano,mes){
   const key=ano+'-'+String(mes+1).padStart(2,'0');
-  // Agendamentos reais do mês
-  const agReais=agendamentos.filter(a=>a.data&&a.data.startsWith(key));
+  // Agendamentos reais do mês (Dia 1 OU Dia 2 cai neste mês)
+  const agReais=agendamentos.filter(a=>{
+    return (a.data&&a.data.startsWith(key))||(a.data2&&a.data2.startsWith(key));
+  });
   // OS do array historico[] legado que pertencem a este mês — montar como agendamentos virtuais
   const osIds=new Set(agReais.map(a=>a.osId));
   const agVirtuais=[];
@@ -2822,9 +2868,21 @@ function rendCalendario(ano,mes,agsMes){
   // Mapa: dia -> agendamentos
   const mapaAg={};
   agsMes.forEach(ag=>{
-    const d=parseInt((ag.data||'').split('-')[2]);
-    if(!mapaAg[d])mapaAg[d]=[];
-    mapaAg[d].push(ag);
+    // Dia 1
+    const d1=parseInt((ag.data||'').split('-')[2]);
+    if(d1){
+      if(!mapaAg[d1])mapaAg[d1]=[];
+      mapaAg[d1].push(ag);
+    }
+    // Dia 2 (só se data2 pertence ao mesmo mês exibido)
+    if(ag.data2){
+      const parts2=ag.data2.split('-');
+      if(parseInt(parts2[0])===ano&&parseInt(parts2[1])-1===mes){
+        const d2=parseInt(parts2[2]);
+        if(!mapaAg[d2])mapaAg[d2]=[];
+        if(!mapaAg[d2].includes(ag))mapaAg[d2].push(ag);
+      }
+    }
   });
 
   // Mapa OS para status
@@ -2893,8 +2951,8 @@ function today(){
 }
 
 function abrirDiaAgenda(dStr,dNum){
-  // Agendamentos reais do dia
-  const agsReais=agendamentos.filter(a=>a.data===dStr);
+  // Agendamentos reais do dia (Dia 1 OU Dia 2)
+  const agsReais=agendamentos.filter(a=>a.data===dStr||a.data2===dStr);
   // Agendamentos virtuais do dia (historico[] legado)
   const osIdsReais=new Set(agsReais.map(a=>a.osId));
   const agsVirtuais=[];
@@ -2982,6 +3040,7 @@ function buildAgCard(ag,noModal){
       <span>🕐 ${ag.hora||'—'}</span>
       <span>📱 ${ag.cliWpp||'—'}</span>
       <span>📍 ${ag.cliEnd||'Dourados-MS'}</span>
+      ${ag.data2?`<span style="grid-column:span 2;font-size:11px;background:rgba(156,39,176,.15);color:#ce93d8;border:1px solid rgba(156,39,176,.3);border-radius:5px;padding:3px 8px;">📅 2 dias: ${new Date(ag.data+'T12:00:00').toLocaleDateString('pt-BR')} → ${new Date(ag.data2+'T12:00:00').toLocaleDateString('pt-BR')}</span>`:''}
       ${ag.formaPgto?`<span style="grid-column:span 2;">💳 ${ag.formaPgto}</span>`:''}
     </div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">🛋️ ${ag.servico||'—'}</div>
@@ -4547,6 +4606,16 @@ function salvarCliente2(){
 // Listener para data/hora de agendamento no modal share
 document.getElementById('share-data-ag').addEventListener('change',atualizarAgendamentoDia);
 document.getElementById('share-hora-ag').addEventListener('change',atualizarAgendamentoDia);
+document.getElementById('share-data2-ag').addEventListener('change',atualizarAgendamentoDia);
+function toggleDia2(){
+  const hab=document.getElementById('share-habilitar-dia2').checked;
+  document.getElementById('share-dia2-bloco').style.display=hab?'block':'none';
+  if(!hab){
+    document.getElementById('share-data2-ag').value='';
+    // Salvar remoção do Dia 2
+    atualizarAgendamentoDia();
+  }
+}
 
 // Chave para controle de backup automático
 const BACKUP_KEY = 'sc_ultimo_backup';
