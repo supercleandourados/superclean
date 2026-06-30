@@ -1019,7 +1019,20 @@ select option{background:#0a1e38;}
     <div id="modal-cli-body"></div>
     <div class="brow" style="margin-top:20px;">
       <button class="btn btn-o" onclick="fecharModal('modal-cli')" style="flex:1;">Fechar</button>
+      <button class="btn btn-g" id="btn-editar-cli" style="flex:1;">✏️ Editar</button>
       <button class="btn btn-d" id="btn-excluir-cli">🗑️ Excluir</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-cli-editar">
+  <div class="modal">
+    <div class="modal-title">✏️ Editar Cliente</div>
+    <div class="field"><label>Nome *</label><input type="text" id="edcli-nome" placeholder="Nome completo"></div>
+    <div class="field"><label>WhatsApp *</label><input type="text" id="edcli-wpp" placeholder="(67) 99999-9999" oninput="fmtFone2(this)"></div>
+    <div class="field"><label>Bairro / Endereço</label><input type="text" id="edcli-end" placeholder="Bairro ou rua"></div>
+    <div class="brow" style="margin-top:20px;">
+      <button class="btn btn-o" onclick="cancelarEdicaoCliente()" style="flex:1;">Cancelar</button>
+      <button class="btn btn-g" onclick="salvarEdicaoCliente()" style="flex:1;">💾 Salvar</button>
     </div>
   </div>
 </div>
@@ -2256,7 +2269,46 @@ function verCliente(id){
     <button class="btn btn-g" onclick="novaOsCliente(${c.id})" style="flex:1;">📋 Nova OS</button>
   </div>`;
   document.getElementById('btn-excluir-cli').onclick=()=>excluirCliente(id);
+  document.getElementById('btn-editar-cli').onclick=()=>abrirEdicaoCliente(id);
   abrirModal('modal-cli');
+}
+
+let _cliEditandoId=null;
+function abrirEdicaoCliente(id){
+  const c=clientes.find(x=>x.id===id);if(!c)return;
+  _cliEditandoId=id;
+  document.getElementById('edcli-nome').value=c.nome||'';
+  document.getElementById('edcli-wpp').value=c.wpp||'';
+  document.getElementById('edcli-end').value=c.end||'';
+  fecharModal('modal-cli');
+  abrirModal('modal-cli-editar');
+  setTimeout(()=>document.getElementById('edcli-nome')?.focus(),150);
+}
+function cancelarEdicaoCliente(){
+  fecharModal('modal-cli-editar');
+  if(_cliEditandoId!=null)verCliente(_cliEditandoId);
+}
+function salvarEdicaoCliente(){
+  const id=_cliEditandoId;
+  const c=clientes.find(x=>x.id===id);if(!c)return;
+  const nome=document.getElementById('edcli-nome').value.trim();
+  const wpp=document.getElementById('edcli-wpp').value.trim();
+  const end=document.getElementById('edcli-end').value.trim();
+  if(!nome){toast('⚠️ Nome obrigatório',true);return;}
+  if(!wpp){toast('⚠️ WhatsApp obrigatório',true);return;}
+  // Proteção contra duplicidade, ignorando o próprio cliente
+  const wppNum=wpp.replace(/\D/g,'');
+  const dupWpp=wppNum.length>=8&&clientes.find(x=>x.id!==id&&(x.wpp||'').replace(/\D/g,'')===wppNum);
+  const nomeLower=nome.toLowerCase().trim();
+  const dupNome=clientes.find(x=>x.id!==id&&(x.nome||'').toLowerCase().trim()===nomeLower);
+  if(dupWpp){toast(`⚠️ Já existe outro cliente com este WhatsApp: ${dupWpp.nome}`,true);return;}
+  if(dupNome){toast(`⚠️ Já existe outro cliente com o nome "${dupNome.nome}"`,true);return;}
+  c.nome=nome;c.wpp=wpp;c.end=end;
+  salvarLocal(true);
+  fecharModal('modal-cli-editar');
+  rendClientes();updStats();
+  toast('✅ Cliente atualizado!');
+  verCliente(id);
 }
 
 function novaOsCliente(id){
