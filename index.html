@@ -438,6 +438,7 @@ select option{background:#0a1e38;}
     <button class="tab" onclick="mudarTab('faturamento')">💰 Financeiro</button>
     <button class="tab" onclick="mudarTab('clientes')">👥 Clientes</button>
     <button class="tab" id="tab-btn-reat" onclick="mudarTab('reat')">🔔 Reativar</button>
+    <button class="tab" id="tab-btn-resgate" onclick="mudarTab('resgate')">🆘 Resgate</button>
     <button class="tab" onclick="mudarTab('config')">⚙️ Config.</button>
   </div>
   <div id="tab-home" class="tbc active">
@@ -890,6 +891,11 @@ select option{background:#0a1e38;}
     <div class="modal-title-h">🔔 Clientes para Reativar</div>
     <div class="modal-sub-txt">Clientes com serviço fechado há 6+ meses</div>
     <div id="lista-reat"></div>
+  </div>
+  <div id="tab-resgate" class="tbc">
+    <div class="modal-title-h">🆘 Resgate de Orçamentos</div>
+    <div class="modal-sub-txt">Orçamentos parados há 5+ dias sem aprovação — recupere com uma mensagem</div>
+    <div id="lista-resgate"></div>
   </div>
   <div id="tab-config" class="tbc">
 
@@ -1451,6 +1457,7 @@ const TIPOS_DEFAULT=[
 ];
 const SERVICOS={hig:'Higienização',imp:'Impermeabilização',amb:'Hig. + Imper.'};
 const PRECO_DEFAULT={hig:100,imp:80,amb:170};
+const GOOGLE_REVIEW_LINK='https://g.page/r/CXaI0LdjqAC3EBM/review';
 const MSGS_REAT=[
   (nome)=>`Olá, ${nome}! 👋\n\nJá faz algum tempo desde sua última higienização conosco.\n\nCom o passar dos meses, *ácaros, fungos, bactérias* e sujeiras invisíveis voltam a se acumular nos estofados, podendo causar alergias e desconfortos para toda a família. 😷\n\nComo você já é cliente da *SUPER CLEAN - Higienização*, liberamos uma *condição especial de retorno*.\n\n🎁 *Desconto exclusivo para clientes antigos.*\n\nEssa condição ficará disponível por tempo limitado.\n\nGostaria de receber uma nova avaliação sem compromisso? Será um prazer atender você novamente! 🛋️✨\n\n📞 (67) 99225-3296\n🌐 supercleandourados.com.br`,
 
@@ -1471,6 +1478,19 @@ const MSGS_REAT=[
   (nome)=>`${nome}, olá! 💙\n\nA *SUPER CLEAN - Higienização* tem uma oferta pra te fazer!\n\nVocê sabia que o cobertor invisível de *ácaros, fungos e bactérias* que se forma nos estofados pode triplicar em 6 meses?\n\nIsso afeta diretamente a qualidade do ar da sua casa e a saúde da sua família! 😷\n\nComo você já vivenciou o nosso serviço, sabe da qualidade que entregamos. E pra te incentivar a renovar o cuidado, preparamos uma *condição exclusiva*:\n\n🎁 Desconto especial para ex-clientes!\n⏰ Oferta por tempo limitado.\n\nResponda essa mensagem e garanta já! 💬\n\n📞 (67) 99225-3296 | @supercleandourados`,
 
   (nome)=>`Oi, ${nome}! 👋 Saudades! 💙\n\nA equipe da *SUPER CLEAN - Higienização* preparou uma surpresa pra você!\n\nNossos clientes especiais merecem cuidados especiais. Por isso, você tem acesso a uma *condição VIP de retorno* com desconto exclusivo!\n\n🛋️ Sofás\n🛏️ Colchões\n🪑 Cadeiras e Poltronas\n\nÁcaros, fungos e bactérias não tiram folga — mas a nossa equipe cuida de tudo! 💪\n\nQuer garantir sua agenda? Manda uma mensagem! 📲\n\nEsperamos você de volta! 🧹✨\n\n📞 (67) 99225-3296\n🌐 supercleandourados.com.br`
+];
+const MSGS_RESGATE=[
+  (nome)=>`Oi, ${nome}! Tudo bem? 😊\n\nVi aqui que seu orçamento de higienização ainda está em aberto, e fiquei pensando: às vezes a gente deixa pra depois achando que "não é prioridade agora"... mas é justamente o contrário! 👇\n\nQuanto mais tempo passa, mais ácaros, fungos e bactérias se acumulam no estofado — e o problema só cresce (e o serviço pode ficar mais trabalhoso). 🦠\n\nQue tal resolvermos isso ainda essa semana? Tenho horário disponível e consigo manter o valor que passei pra você. 🛋️✨\n\n📞 (67) 99225-3296\n— SUPER CLEAN - Higienização`,
+
+  (nome)=>`${nome}, posso te fazer uma pergunta sincera? 🤔\n\nMuita gente acha que "vou pensar" significa "tá caro", mas na real, o que sai caro é *não* higienizar — porque o desgaste e a sujeira acumulada encurtam a vida útil do estofado (e da sua saúde 😷).\n\nO investimento que te passei já é o valor justo pelo trabalho profissional completo — sem custo escondido.\n\nSe o que te travou foi outra coisa (data, forma de pagamento, dúvida sobre o serviço), me conta que a gente resolve juntos! 💬\n\n📞 (67) 99225-3296\n— SUPER CLEAN - Higienização`,
+
+  (nome)=>`Olá, ${nome}! 👋\n\nNotei que seu orçamento ainda está parado, e quero te tranquilizar sobre uma coisa: já são +10.000 serviços realizados em Dourados e região, com clientes satisfeitos todos os dias. 🛡️✅\n\nSe a dúvida é "será que funciona mesmo?" — pode ficar tranquilo(a), trabalhamos com produtos profissionais e equipe especializada, sem prejudicar tecido nem estofado.\n\nVamos marcar uma data? Tenho horários essa semana! 📅\n\n📞 (67) 99225-3296\n— SUPER CLEAN - Higienização`,
+
+  (nome)=>`${nome}, tudo certo? 🌟\n\nÀs vezes a gente adia um serviço de higienização achando que "dá pra esperar mais um pouco"... mas o problema é que ácaros e fungos não esperam! Eles se multiplicam rápido, principalmente nesse clima daqui de Dourados. 😷\n\nA boa notícia: ainda dá tempo de resolver com o valor que combinamos. Não posso garantir que a condição fique disponível por muito tempo, então se puder me confirmar ainda hoje, já te encaixo na agenda! ⏰\n\n📞 (67) 99225-3296\n— SUPER CLEAN - Higienização`,
+
+  (nome)=>`Oi, ${nome}! 💙\n\nSei que a rotina é corrida e às vezes esse tipo de cuidado acaba ficando pra depois — isso é super comum, não se preocupe!\n\nMas deixa eu te lembrar: um estofado limpo e protegido não é luxo, é saúde pra você e sua família, principalmente se tem criança, idoso ou pet em casa. 🏠❤️\n\nQue tal eu já deixar um horário reservado pra você, sem compromisso? Se não der, é só me avisar e remarcamos numa boa. 😊\n\n📞 (67) 99225-3296\n— SUPER CLEAN - Higienização`,
+
+  (nome)=>`${nome}, boa tarde! ☀️\n\nFico à disposição caso tenha ficado alguma dúvida sobre o orçamento que te passei — é bem comum pensar "será que vale a pena mesmo?" antes de decidir. 🤝\n\nA resposta é sim: higienização profissional remove até 99,9% de ácaros, fungos e bactérias que a limpeza caseira não alcança, devolvendo o cheiro de novo pro estofado. ✨\n\nSe quiser, posso confirmar seu horário agora mesmo e cuidar de tudo pra você. Vamos? 📲\n\n📞 (67) 99225-3296\n— SUPER CLEAN - Higienização`
 ];
 let ic=0;
 let clientes   = [];
@@ -1528,7 +1548,7 @@ window.scRender = function() {
     const hmesEl = document.getElementById('hmes');
     if(hmesEl) hmesEl.textContent = getMesLabel(mesAtual);
     // Marcar todas as abas como dirty
-    marcarDirty('home','hist','faturamento','clientes','reat','agenda');
+    marcarDirty('home','hist','faturamento','clientes','reat','agenda','resgate');
     // Renderizar APENAS a aba visível — chamando a função diretamente (não mudarTab)
     const t = window._tabAtual || 'home';
     _abasDirty[t] = true;
@@ -1541,6 +1561,7 @@ window.scRender = function() {
     else if(t==='agenda') { rendAgenda();           _abasDirty.agenda=false; }
     else if(t==='faturamento'){ rendFaturamento();  _abasDirty.faturamento=false; }
     else if(t==='reat')   { calcReativacao(false);  _abasDirty.reat=false; }
+    else if(t==='resgate'){ calcResgate(false);     _abasDirty.resgate=false; }
     else if(t==='nova-os'){ rendProxServicos(); }
     else if(t==='clientes'){
       const subRanking=document.getElementById('sub-cli-ranking');
@@ -1712,6 +1733,7 @@ function init(){
     rendProxServicos();
     // rendFaturamento e rendHist são lazy — renderizam quando o usuário abre as abas
     setTimeout(()=>calcReativacao(true), 800);
+    setTimeout(()=>calcResgate(false), 900);
     setTimeout(()=>verificarBackupAutomatico(), 2000);
     setTimeout(()=>verificarMesNovo(), 3000);
     setTimeout(()=>arquivarOSAntigas(), 5000); // arquivamento silencioso
@@ -1804,7 +1826,7 @@ function _renderUIaposAcao() {
   requestAnimationFrame(() => {
     _renderUIpending = false;
     if(window._scRendering) return;
-    marcarDirty('home','hist','faturamento','clientes','reat','agenda');
+    marcarDirty('home','hist','faturamento','clientes','reat','agenda','resgate');
     updStats();
     const t = window._tabAtual || 'home';
     _abasDirty[t] = true;
@@ -1817,6 +1839,7 @@ function _renderUIaposAcao() {
     else if(t === 'agenda')      { rendAgenda();           _abasDirty.agenda = false; }
     else if(t === 'faturamento') { rendFaturamento();      _abasDirty.faturamento = false; }
     else if(t === 'reat')        { calcReativacao(false);  _abasDirty.reat = false; }
+    else if(t === 'resgate')     { calcResgate(false);     _abasDirty.resgate = false; }
     else if(t === 'nova-os')     { rendProxServicos(); }
     else if(t === 'clientes') {
       const subRanking = document.getElementById('sub-cli-ranking');
@@ -3093,8 +3116,9 @@ function buildAgCard(ag,noModal){
 
   const dtFmt=ag.data?new Date(ag.data+'T12:00:00').toLocaleDateString('pt-BR'):'';
   const botoesAcao=ehVirtual
-    // Card virtual (legado): só WhatsApp, sem ações
-    ? `<button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>`
+    // Card virtual (legado): WhatsApp + pedir avaliação (já é considerado executado)
+    ? `<button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>
+      <button class="btn" style="padding:6px 12px;font-size:12px;background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.35);color:#ffc107;" onclick="pedirAvaliacao('${ag.cliWpp||''}','${(ag.cliNome||'').replace(/'/g,"\\'")}')">⭐ Pedir Avaliação</button>`
     : `
       <button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>
       ${!osCancelada&&!executado?`<button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="remarcarAg('${ag.id}')">📅 Remarcar</button>`:''}
@@ -3104,6 +3128,8 @@ function buildAgCard(ag,noModal){
         ?`<button class="btn btn-g" style="padding:6px 12px;font-size:12px;" onclick="marcarExecutado('${ag.id}')">✅ Executado</button>`:''}
       ${executado
         ?`<button class="btn btn-o" style="padding:6px 12px;font-size:12px;border-color:var(--orange);color:var(--orange);" onclick="desfazerExecutado('${ag.id}')">↩️ Desfazer</button>`:''}
+      ${executado
+        ?`<button class="btn" style="padding:6px 12px;font-size:12px;background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.35);color:#ffc107;" onclick="pedirAvaliacao('${ag.cliWpp||''}','${(ag.cliNome||'').replace(/'/g,"\\'")}')">⭐ Pedir Avaliação</button>`:''}
       ${!osCancelada&&!executado
         ?`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="cancelarOSdaAgenda('${ag.id}')">🔴 Cancelar</button>`:''}
     `;
@@ -3473,6 +3499,13 @@ function virarMes(){
   rendHist(); updStats(); rendFaturamento();
   toast('✅ Sistema sincronizado com o mês atual: ' + getMesLabel(mesAtual));
 }
+function pedirAvaliacao(wpp,nome){
+  const primeiroNome=(nome||'').split(' ')[0];
+  const msg=`Oi, ${primeiroNome}! 😊\n\nFoi um prazer cuidar do seu estofado! Ficamos muito felizes em atender você. 🛋️✨\n\nVocê pode nos ajudar muito deixando uma avaliação rápida no Google? Leva só 1 minutinho e é super importante pra gente! 🙏⭐\n\n${GOOGLE_REVIEW_LINK}\n\nMuito obrigado pela confiança!\n— Equipe SUPER CLEAN - Higienização`;
+  const f=(wpp||'').replace(/\D/g,'');
+  const url=f?`https://wa.me/55${f}?text=${encodeURIComponent(msg)}`:`https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+}
 function buildReatCard(r,agora){
   const d=Math.floor((agora-r.data)/(24*60*60*1000));
   const m=(d/30).toFixed(1);const v=d>210;
@@ -3544,6 +3577,50 @@ function calcReativacao(mostrarAlerta){
     if(sub)sub.textContent=qtd===1?'1 cliente está esperando há mais de 6 meses pelo seu contato!':qtd+' clientes estão esperando há mais de 6 meses pelo seu contato!';
     if(lista)lista.innerHTML=reat.slice(0,5).map(r=>buildReatCard(r,agora)).join('');
     abrirModal('modal-alerta-reat');
+  }
+}
+function buildResgateCard(o,agora){
+  const d=Math.floor((agora-new Date(o.dataCriacao))/(24*60*60*1000));
+  const msgIdx=o.cliId?(o.cliId%MSGS_RESGATE.length):0;
+  const msgFn=MSGS_RESGATE[msgIdx]||MSGS_RESGATE[0];
+  const msgWpp=msgFn(o.cliNome.split(' ')[0]);
+  const fWpp=(o.cliWpp||'').replace(/\D/g,'');
+  const linkWpp='https://wa.me/'+(fWpp?'55'+fWpp:'')+'?text='+encodeURIComponent(msgWpp);
+  const servico=o.itens?o.itens.map(i=>i.tipo).join(', '):'';
+  return `<div class="reat-item" style="margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:8px;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:#fff;">${o.cliNome}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:3px;">📱 ${o.cliWpp||'—'} · OS #${String(o.numero).padStart(4,'0')}</div>
+        <div style="font-size:11px;color:var(--muted);">🛋️ ${servico||'—'}</div>
+        <div style="font-size:11px;color:var(--orange);font-weight:600;">⏰ Parado há ${d} dia${d!==1?'s':''} sem resposta</div>
+      </div>
+      <span style="font-size:15px;font-weight:700;color:var(--green);white-space:nowrap;">${fmtMoeda(o.total)}</span>
+    </div>
+    <div class="brow" style="margin-top:8px;">
+      <button class="btn btn-wpp" onclick="window.open('${linkWpp}','_blank')" style="flex:1;padding:7px;font-size:12px;">📱 Tentar Resgatar via WhatsApp</button>
+    </div>
+  </div>`;
+}
+function calcResgate(mostrarAlerta){
+  const el=document.getElementById('lista-resgate');
+  const agora=new Date();const cincoDias=5*24*60*60*1000;
+
+  const pendentes=getTodasOS().filter(o=>o.status==='pendente'&&o.dataCriacao&&(agora-new Date(o.dataCriacao))>=cincoDias)
+    .sort((a,b)=>new Date(a.dataCriacao)-new Date(b.dataCriacao));
+  const qtd=pendentes.length;
+
+  const tabBtn=document.getElementById('tab-btn-resgate');
+  if(tabBtn){
+    const badgeExist=tabBtn.querySelector('.tab-badge');
+    if(qtd>0){
+      if(!badgeExist){const badge=document.createElement('span');badge.className='tab-badge';badge.id='resgate-tab-badge';badge.textContent=qtd;tabBtn.appendChild(badge);}
+      else{badgeExist.textContent=qtd;}
+    } else {if(badgeExist)badgeExist.remove();}
+  }
+  if(el){
+    if(!pendentes.length){el.innerHTML='<div class="empty">🎉 Nenhum orçamento parado há mais de 5 dias</div>';}
+    else{el.innerHTML=pendentes.map(o=>buildResgateCard(o,agora)).join('');}
   }
 }
 function rendTipos(){
@@ -3626,7 +3703,7 @@ function invalidarFatCache(){
 // ============ SISTEMA DIRTY — lazy render de abas pesadas ============
 const _abasDirty = {
   hist: true, faturamento: true, clientes: true,
-  reat: true, agenda: true, home: true
+  reat: true, agenda: true, home: true, resgate: true
 };
 function marcarDirty(...abas){
   abas.forEach(a => { _abasDirty[a] = true; });
@@ -4283,6 +4360,7 @@ function mudarTab(t){
   if(t==='agenda'){if(_abasDirty.agenda){rendAgenda();_abasDirty.agenda=false;}}
   if(t==='faturamento'){if(_abasDirty.faturamento){rendFaturamento();_abasDirty.faturamento=false;}}
   if(t==='reat'){if(_abasDirty.reat){calcReativacao(false);_abasDirty.reat=false;}}
+  if(t==='resgate'){if(_abasDirty.resgate){calcResgate(false);_abasDirty.resgate=false;}}
   if(t==='clientes'){
     if(_abasDirty.clientes){
       const subRanking=document.getElementById('sub-cli-ranking');
