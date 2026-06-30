@@ -1173,6 +1173,21 @@ select option{background:#0a1e38;}
     <div class="modal-title">📅 Remarcar Agendamento</div>
     <div class="field"><label>Nova Data *</label><input type="date" id="modal-remarcar-data"></div>
     <div class="field"><label>Novo Horário *</label><input type="time" id="modal-remarcar-hora" value="08:00"></div>
+    <div class="field" style="margin-top:12px;">
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;">
+        <input type="checkbox" id="modal-remarcar-habilitar-dia2" onchange="toggleDia2Remarcar()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--sky);">
+        <span>📅 Serviço de 2 dias</span>
+      </label>
+    </div>
+    <div id="modal-remarcar-dia2-bloco" style="display:none;margin-top:8px;">
+      <div class="field" style="margin-bottom:4px;">
+        <label>Dia 2 (conclusão do serviço)</label>
+        <input type="date" id="modal-remarcar-data2">
+      </div>
+      <div style="font-size:11px;color:var(--sky);margin-top:4px;background:rgba(42,171,238,.08);border:1px solid rgba(42,171,238,.2);border-radius:6px;padding:6px 10px;">
+        💡 O cliente aparecerá nos dois dias no calendário
+      </div>
+    </div>
     <div class="brow">
       <button class="btn btn-o" onclick="fecharModal('modal-remarcar')" style="flex:1;">Cancelar</button>
       <button class="btn btn-g" id="modal-remarcar-ok" style="flex:1;">✅ Remarcar</button>
@@ -4558,19 +4573,32 @@ function rmTipo(i){
     toast('🗑️ Tipo removido');
   });
 }
+function toggleDia2Remarcar(){
+  const hab=document.getElementById('modal-remarcar-habilitar-dia2')?.checked;
+  const bloco=document.getElementById('modal-remarcar-dia2-bloco');
+  if(bloco)bloco.style.display=hab?'block':'none';
+}
 function remarcarAg(agId){
   const ag=agendamentos.find(a=>String(a.id)===String(agId));if(!ag)return;
   document.getElementById('modal-remarcar-data').value=ag.data||today();
   document.getElementById('modal-remarcar-hora').value=ag.hora||'08:00';
+  // Se já era um serviço de 2 dias, mantém o bloco do Dia 2 visível e preenchido
+  const hab2El=document.getElementById('modal-remarcar-habilitar-dia2');
+  const data2El=document.getElementById('modal-remarcar-data2');
+  if(hab2El)hab2El.checked=!!ag.data2;
+  if(data2El)data2El.value=ag.data2||'';
+  toggleDia2Remarcar();
   document.getElementById('modal-remarcar-ok').onclick=()=>{
     const novaData=document.getElementById('modal-remarcar-data').value;
     const novaHora=document.getElementById('modal-remarcar-hora').value;
     if(!novaData||!novaHora){toast('⚠️ Informe data e horário',true);return;}
+    const hab2=document.getElementById('modal-remarcar-habilitar-dia2')?.checked;
+    const data2Val=document.getElementById('modal-remarcar-data2')?.value||'';
+    if(hab2&&!data2Val){toast('⚠️ Informe a data do Dia 2 ou desmarque "Serviço de 2 dias"',true);return;}
     ag.data=novaData;ag.hora=novaHora;ag.status='confirmado';ag.updatedAt=Date.now();
-    // "Remarcar" move o serviço para UMA nova data — qualquer "Dia 2" antigo
-    // (de um agendamento de 2 dias anterior) é descartado para não duplicar
-    // o cliente em dois dias diferentes do calendário.
-    ag.data2=null;
+    // Dia 2 só permanece se o usuário explicitamente mantiver/marcar a opção —
+    // assim nunca fica um "Dia 2" órfão de uma remarcação anterior duplicando o cliente no calendário.
+    ag.data2=(hab2&&data2Val&&data2Val!==novaData)?data2Val:null;
     salvarLocal({agenda:true});
     fecharModal('modal-remarcar');fecharModal('modal-ag-dia');
     rendAgenda();
