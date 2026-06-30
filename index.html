@@ -659,7 +659,7 @@ select option{background:#0a1e38;}
       <div style="background:rgba(100,100,100,.08);border:1px solid rgba(100,100,100,.2);border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;">
         <div style="display:flex;align-items:center;gap:6px;">
           <div style="width:8px;height:8px;border-radius:50%;background:#aaa;"></div>
-          <span style="font-size:12px;color:var(--muted);" id="ag-ct-canc">0 cancelados</span>
+          <span style="font-size:12px;color:var(--muted);" id="ag-ct-canc-detalhe">0 cancelados</span>
         </div>
         <span style="font-size:13px;font-weight:700;color:#aaa;" id="ag-canc-val">R$ 0,00</span>
       </div>
@@ -2303,7 +2303,16 @@ function addItem(){
   document.getElementById('items-list').appendChild(d);
   calcTotais();
 }
-function autoPreco(id){calcItem(id);}
+function autoPreco(id){
+  const tipo=document.getElementById('tip_'+id)?.value;
+  const srv=document.getElementById('srv_'+id)?.value;
+  const vlEl=document.getElementById('vl_'+id);
+  if(tipo&&srv&&vlEl){
+    const preco=getPreco(tipo,srv);
+    vlEl.value=preco.toFixed(2).replace('.',',');
+  }
+  calcItem(id);
+}
 function parseVal(v){return parseFloat((v||'0').replace(',','.'))||0;}
 function parseQtd(v){return parseInt((v||'1').replace(/\D/g,''))||1;}
 function calcItem(id){
@@ -2580,7 +2589,11 @@ function atualizarAgendamentoDia(){
   } else {
     criarAgendamento(os,data,hora,data2);
   }
-  salvarLocal({agenda:true});
+  // CRÍTICO: manter a OS sincronizada para o card "fantasma" legado nunca apontar pra data antiga
+  os.dataServico=data;
+  os.horaServico=hora;
+  os.updatedAt=Date.now();
+  salvarLocal({ordens:true,agenda:true});
   toast('📅 Agendamento atualizado!');
 }
 
@@ -2866,7 +2879,7 @@ function getAgsMes(ano,mes){
   // OS do array historico[] legado que pertencem a este mês — montar como agendamentos virtuais
   const osIds=new Set(agReais.map(a=>a.osId));
   const agVirtuais=[];
-  getTodasOS().filter(o=>historico.length&&!osIds.has(o.id)).forEach(o=>{
+  getTodasOS().filter(o=>historico.length&&!osIds.has(o.id)&&!o.ocultarFantasma).forEach(o=>{
     if(!o.id)return; // já tem agendamento real
     // Usar dataServico ou dataFechamento para posicionar no calendário
     const dataPos=o.dataServico||(o.dataFechamento?o.dataFechamento.slice(0,10):null)||(o.dataCriacao?o.dataCriacao.slice(0,10):null);
@@ -2940,6 +2953,8 @@ function rendAgenda(){
   document.getElementById('ag-ct-conf').textContent=agendados.length+' agendado'+(agendados.length!==1?'s':'');
   document.getElementById('ag-ct-pend').textContent=executados.length+' executado'+(executados.length!==1?'s':'');
   document.getElementById('ag-ct-canc').textContent=cancelados.length+' cancelado'+(cancelados.length!==1?'s':'');
+  const elCancDetalhe=document.getElementById('ag-ct-canc-detalhe');
+  if(elCancDetalhe)elCancDetalhe.textContent=cancelados.length+' cancelado'+(cancelados.length!==1?'s':'');
 
   // Calendário (usa todos, sem filtro de busca, para não quebrar o visual)
   rendCalendario(agendaAno,agendaMes,agsMesBrutos);
@@ -3049,7 +3064,7 @@ function abrirDiaAgenda(dStr,dNum){
   const osIdsReais=new Set(agsReais.map(a=>a.osId));
   const agsVirtuais=[];
   getTodasOS().forEach(o=>{
-    if(osIdsReais.has(o.id))return;
+    if(osIdsReais.has(o.id)||o.ocultarFantasma)return;
     const dataPos=o.dataServico||(o.dataFechamento?o.dataFechamento.slice(0,10):null)||(o.dataCriacao?o.dataCriacao.slice(0,10):null);
     if(dataPos!==dStr)return;
     agsVirtuais.push({
@@ -3092,6 +3107,18 @@ function rendListaAgenda(ags,titleId,listaId,titulo){
   }).map(ag=>buildAgCard(ag,false)).join('');
 }
 
+function removerFantasma(osId){
+  confirmar('🗑️ Remover da Agenda','Este card é apenas um registro antigo que ficou preso no calendário (não afeta a OS nem o histórico do cliente). Remover da agenda?','🗑️ Remover','btn-d',()=>{
+    const os=getTodasOS().find(o=>o.id===osId||String(o.id)===String(osId));
+    if(!os){toast('⚠️ Não encontrado',true);return;}
+    os.ocultarFantasma=true;
+    os.updatedAt=Date.now();
+    salvarLocal({ordens:true});
+    fecharModal('modal-ag-dia');
+    rendAgenda();
+    toast('🗑️ Removido da agenda.');
+  });
+}
 function buildAgCard(ag,noModal){
   // Determinar status real de exibição na agenda
   const os=getTodasOS().find(o=>o.id===ag.osId||String(o.id)===String(ag.osId));
@@ -3116,9 +3143,10 @@ function buildAgCard(ag,noModal){
 
   const dtFmt=ag.data?new Date(ag.data+'T12:00:00').toLocaleDateString('pt-BR'):'';
   const botoesAcao=ehVirtual
-    // Card virtual (legado): WhatsApp + pedir avaliação (já é considerado executado)
+    // Card virtual (legado): WhatsApp + pedir avaliação + remover (caso tenha ficado preso no dia errado)
     ? `<button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>
-      <button class="btn" style="padding:6px 12px;font-size:12px;background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.35);color:#ffc107;" onclick="pedirAvaliacao('${ag.cliWpp||''}','${(ag.cliNome||'').replace(/'/g,"\\'")}')">⭐ Pedir Avaliação</button>`
+      <button class="btn" style="padding:6px 12px;font-size:12px;background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.35);color:#ffc107;" onclick="pedirAvaliacao('${ag.cliWpp||''}','${(ag.cliNome||'').replace(/'/g,"\\'")}')">⭐ Pedir Avaliação</button>
+      <button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="removerFantasma('${ag.osId}')">🗑️ Remover</button>`
     : `
       <button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>
       ${!osCancelada&&!executado?`<button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="remarcarAg('${ag.id}')">📅 Remarcar</button>`:''}
@@ -3132,6 +3160,8 @@ function buildAgCard(ag,noModal){
         ?`<button class="btn" style="padding:6px 12px;font-size:12px;background:rgba(255,193,7,.12);border:1px solid rgba(255,193,7,.35);color:#ffc107;" onclick="pedirAvaliacao('${ag.cliWpp||''}','${(ag.cliNome||'').replace(/'/g,"\\'")}')">⭐ Pedir Avaliação</button>`:''}
       ${!osCancelada&&!executado
         ?`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="cancelarOSdaAgenda('${ag.id}')">🔴 Cancelar</button>`:''}
+      ${osCancelada
+        ?`<button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="excluirAg('${ag.id}')">🗑️ Excluir</button>`:''}
     `;
   return `<div class="ag-item ${statusCls}" id="agcard_${ag.id}">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -3258,6 +3288,8 @@ function fatVoltarPendente(osId){
       delete os.dataFechamento;
       delete os.dataAprovacao;
       delete os.dataExecucao;
+      delete os.dataServico;
+      delete os.horaServico;
       // Remover agendamento vinculado
       agendamentos=agendamentos.filter(a=>String(a.osId)!==String(os.id));
       salvarLocal({ordens:true,agenda:true});updStats();rendFaturamento();rendHist();rendProxServicos();
@@ -3873,7 +3905,10 @@ function rendCalendarioHome(){
       if(d2){
         if(!mapaAg[d2])mapaAg[d2]={ag:0,ex:0,val:0};
         if(isExec){ mapaAg[d2].ex++; } else { mapaAg[d2].ag++; }
-        // Não somar valor no Dia 2 para não duplicar o faturamento
+        // Soma o valor também no Dia 2 — mesma regra do calendário da aba Agenda,
+        // pra mostrar quanto está previsto/realizado NAQUELE dia específico.
+        // (Os totais de faturamento do mês continuam contando a OS só 1x, sem duplicar.)
+        mapaAg[d2].val+=parseFloat(ag.valor||0);
       }
     }
   });
@@ -4515,8 +4550,12 @@ function reabrirOS(id){
     delete os.dataCancelamento;
     delete os.dataFechamento;
     delete os.dataAprovacao;
-    salvarLocal({ordens:true});
-    marcarDirty('hist');
+    delete os.dataServico;
+    delete os.horaServico;
+    // OS pendente não deve ter agendamento ativo na agenda
+    agendamentos=agendamentos.filter(a=>a.osId!==os.id);
+    salvarLocal({ordens:true,agenda:true});
+    marcarDirty('hist','agenda');
     rendHist();
     updStats();
     toast('✅ OS reaberta — voltou para Pendente.');
@@ -4677,7 +4716,15 @@ function remarcarAg(agId){
     // Dia 2 só permanece se o usuário explicitamente mantiver/marcar a opção —
     // assim nunca fica um "Dia 2" órfão de uma remarcação anterior duplicando o cliente no calendário.
     ag.data2=(hab2&&data2Val&&data2Val!==novaData)?data2Val:null;
-    salvarLocal({agenda:true});
+    // CRÍTICO: manter a OS sincronizada com o agendamento. Se "dataServico"/"horaServico"
+    // ficarem com a data antiga, o cliente reaparece "fantasma" no dia velho do calendário.
+    const osVinc=ordens.find(o=>o.id===ag.osId||String(o.id)===String(ag.osId));
+    if(osVinc){
+      osVinc.dataServico=novaData;
+      osVinc.horaServico=novaHora;
+      osVinc.updatedAt=Date.now();
+    }
+    salvarLocal({ordens:true,agenda:true});
     fecharModal('modal-remarcar');fecharModal('modal-ag-dia');
     rendAgenda();
     toast('📅 Agendamento remarcado!');
@@ -4742,10 +4789,14 @@ function updStatus(id,s){
     confirmar('🔴 Confirmar Cancelamento','Tem certeza que deseja cancelar esta OS?','🔴 Cancelar OS','btn-d',()=>{
       os.status='cancelado';
       os.dataCancelamento=new Date().toISOString();
+      os.updatedAt=Date.now();
       if(antigo==='aprovado'){
         agendamentos=agendamentos.filter(a=>a.osId!==os.id);
         delete os.dataFechamento;
         delete os.dataAprovacao;
+        // Evita que a OS reapareça "fantasma" no calendário na data antiga
+        delete os.dataServico;
+        delete os.horaServico;
       }
       salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
       toast('🔴 OS cancelada — removida da Agenda.');
@@ -4758,10 +4809,14 @@ function updStatus(id,s){
   // PENDENTE
   confirmar('🟡 Alterar Status','Tem certeza que deseja alterar esta OS?','🟡 Confirmar','btn-o',()=>{
     os.status=s;
+    os.updatedAt=Date.now();
     if(antigo==='aprovado'){
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
       delete os.dataFechamento;
       delete os.dataAprovacao;
+      // Evita que a OS reapareça "fantasma" no calendário na data antiga
+      delete os.dataServico;
+      delete os.horaServico;
     }
     salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
     toast('🟡 OS voltou para Pendente.');
