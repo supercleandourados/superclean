@@ -1247,11 +1247,55 @@ const CLI_COL = collection(db, 'superclean_clientes');
 let _fbSaving = false;
 let _fbLoaded = false;
 let _cliSaving = false;
+let _fbSalvarTimer = null;
+
+// Mescla registro a registro por "id" — em vez de "documento inteiro vence",
+// cada OS/agendamento individual só é sobrescrito se a outra versão for
+// realmente mais nova (updatedAt). Evita que uma aba/aparelho desatualizado
+// apague uma remarcação ou execução feita em outro dispositivo há poucos segundos.
+function mesclarPorId(arrLocal, arrCloud) {
+  const mapa = {};
+  (arrCloud||[]).forEach(item => { if(item && item.id!==undefined && item.id!==null) mapa[item.id] = item; });
+  (arrLocal||[]).forEach(item => {
+    if(!item || item.id===undefined || item.id===null) return;
+    const cloudItem = mapa[item.id];
+    if(!cloudItem){ mapa[item.id] = item; return; }
+    const tsLocal = item.updatedAt||0, tsCloud = cloudItem.updatedAt||0;
+    // Empate (ou nenhum dos dois tem timestamp): vence a ação local — é ela que está sendo salva agora
+    mapa[item.id] = (tsLocal >= tsCloud) ? item : cloudItem;
+  });
+  return Object.values(mapa);
+}
 
 // Salvar dados operacionais (ordens, agenda, etc — sem clientes)
 window.fbSalvar = async function() {
+  // Debounce leve: agrupa salvamentos disparados em sequência rápida (ex: vários toques seguidos)
+  if(_fbSalvarTimer) clearTimeout(_fbSalvarTimer);
+  _fbSalvarTimer = setTimeout(_fbSalvarReal, 400);
+};
+
+async function _fbSalvarReal() {
   try {
     _fbSaving = true;
+    // Antes de gravar, busca a versão mais recente da nuvem e mescla registro a registro,
+    // assim uma edição feita em outro aparelho/aba enquanto este salvava não é perdida.
+    try {
+      const snapAtual = await getDoc(REF);
+      if (snapAtual.exists()) {
+        const dCloud = snapAtual.data();
+        if (dCloud.ordens) {
+          window._sc.ordens = mesclarPorId(window._sc.ordens, JSON.parse(dCloud.ordens));
+          localStorage.setItem('sc_ordens', JSON.stringify(window._sc.ordens));
+        }
+        if (dCloud.agendamentos) {
+          window._sc.agendamentos = mesclarPorId(window._sc.agendamentos, JSON.parse(dCloud.agendamentos));
+          localStorage.setItem('sc_agenda', JSON.stringify(window._sc.agendamentos));
+        }
+      }
+    } catch(mergeErr) {
+      console.warn('[SC] Mesclagem pré-salvamento falhou, salvando dados locais mesmo assim:', mergeErr);
+    }
+
     await setDoc(REF, {
       ordens:       JSON.stringify(window._sc.ordens),
       historico:    JSON.stringify(window._sc.historico),
@@ -1263,13 +1307,18 @@ window.fbSalvar = async function() {
       meta:         String(window._sc.meta||0),
       updatedAt:    new Date().toISOString()
     });
+    // Reflete o resultado mesclado na tela, caso algo de outro aparelho tenha sido incorporado
+    if (window.scRender && !window._scRendering) {
+      window._renderPending = true;
+      requestAnimationFrame(()=>{ window.scRender(); window._renderPending = false; });
+    }
     setTimeout(()=>{ _fbSaving = false; }, 2000);
     if(window.showCloudToast)window.showCloudToast();
   } catch(e) {
     _fbSaving = false;
     console.warn('Firebase save error:', e);
   }
-};
+}
 
 // Salvar clientes na coleção separada (escala sem limite)
 window.fbSalvarClientes = async function(lista) {
@@ -2396,6 +2445,7 @@ function updStatusShare(){
     confirmar('🟢 Confirmar Agendamento','Tem certeza que deseja agendar esta OS? Ela entrará na Agenda.','🟢 Agendar','btn-g',()=>{
       os.status='aprovado';
       os.executado=false;
+      os.updatedAt=Date.now();
       os.mes=getMesKey();
       os.dataFechamento=new Date().toISOString();
       os.dataAprovacao=new Date().toISOString();
@@ -2436,6 +2486,7 @@ function updStatusShare(){
   // PENDENTE: confirmar alteração
   confirmar('🟡 Voltar para Pendente','Tem certeza que deseja alterar esta OS para Pendente?','🟡 Confirmar','btn-o',()=>{
     os.status='pendente';
+    os.updatedAt=Date.now();
     if(antigo==='aprovado'){
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
       delete os.dataFechamento;
@@ -2466,7 +2517,8 @@ function criarAgendamento(os, data, hora, data2){
     obs:os.obs||'',
     formaPgto:os.formaPgto||'',
     status:'confirmado',
-    criadoEm:new Date().toISOString()
+    criadoEm:new Date().toISOString(),
+    updatedAt:Date.now()
   };
   agendamentos.push(ag);
 }
@@ -2485,6 +2537,7 @@ function atualizarAgendamentoDia(){
     agendamentos[agIdx].data=data;
     agendamentos[agIdx].hora=hora;
     agendamentos[agIdx].data2=data2||null;
+    agendamentos[agIdx].updatedAt=Date.now();
   } else {
     criarAgendamento(os,data,hora,data2);
   }
@@ -3148,6 +3201,7 @@ function fatVoltarPendente(osId){
     ()=>{
       os.status='pendente';
       os.executado=false;
+      os.updatedAt=Date.now();
       delete os.dataFechamento;
       delete os.dataAprovacao;
       delete os.dataExecucao;
@@ -4287,6 +4341,7 @@ function cancelarAg(agId){
   confirmar('❌ Cancelar Agendamento','Tem certeza que deseja cancelar este agendamento?','❌ Cancelar','btn-d',()=>{
     const ag=agendamentos.find(a=>a.id===agId);if(!ag)return;
     ag.status='cancelado';
+    ag.updatedAt=Date.now();
     salvarLocal({agenda:true});
     fecharModal('modal-ag-dia');
     rendAgenda();
@@ -4303,6 +4358,7 @@ function marcarExecutado(agId){
   confirmar('✅ Marcar como Executado','Tem certeza que deseja marcar este serviço como executado?','✅ Confirmar','btn-g',()=>{
     os.executado=true;
     os.dataExecucao=new Date().toISOString();
+    os.updatedAt=Date.now();
     salvarLocal({ordens:true});
     fecharModal('modal-ag-dia');
     rendAgenda();
@@ -4319,6 +4375,7 @@ function desfazerExecutado(agId){
   confirmar('↩️ Desfazer Execução','Tem certeza que deseja reverter para "Agendado"? Use apenas em caso de imprevisto com o cliente.','↩️ Desfazer','btn-o',()=>{
     os.executado=false;
     delete os.dataExecucao;
+    os.updatedAt=Date.now();
     salvarLocal({ordens:true});
     fecharModal('modal-ag-dia');
     rendAgenda();
@@ -4335,6 +4392,7 @@ function cancelarOSdaAgenda(agId){
     os.status='cancelado';
     os.dataCancelamento=new Date().toISOString();
     delete os.dataFechamento;
+    os.updatedAt=Date.now();
     salvarLocal({ordens:true,agenda:true});updStats();rendFaturamento();
     fecharModal('modal-ag-dia');
     rendAgenda();
@@ -4348,6 +4406,7 @@ function reabrirOS(id){
   if(!os||os.status!=='cancelado')return;
   confirmar('↩️ Reabrir Orçamento','Deseja reabrir esta OS? Ela voltará para "Pendente".','↩️ Reabrir','btn-g',()=>{
     os.status='pendente';
+    os.updatedAt=Date.now();
     delete os.dataCancelamento;
     delete os.dataFechamento;
     delete os.dataAprovacao;
@@ -4495,7 +4554,7 @@ function remarcarAg(agId){
     const novaData=document.getElementById('modal-remarcar-data').value;
     const novaHora=document.getElementById('modal-remarcar-hora').value;
     if(!novaData||!novaHora){toast('⚠️ Informe data e horário',true);return;}
-    ag.data=novaData;ag.hora=novaHora;ag.status='confirmado';
+    ag.data=novaData;ag.hora=novaHora;ag.status='confirmado';ag.updatedAt=Date.now();
     salvarLocal({agenda:true});
     fecharModal('modal-remarcar');fecharModal('modal-ag-dia');
     rendAgenda();
@@ -4514,6 +4573,7 @@ function updStatus(id,s){
       confirmar('🟢 Confirmar Agendamento','Tem certeza que deseja agendar esta OS? Ela entrará na Agenda.','🟢 Agendar','btn-g',()=>{
         os.status='aprovado';
         os.executado=false;
+        os.updatedAt=Date.now();
         os.mes=getMesKey();
         os.dataFechamento=new Date().toISOString();
         os.dataAprovacao=new Date().toISOString();
@@ -4536,6 +4596,7 @@ function updStatus(id,s){
       if(!dataAg||!horaAg){toast('⚠️ Informe a data e horário do serviço.',true);return;}
       os.status='aprovado';
       os.executado=false;
+      os.updatedAt=Date.now();
       os.mes=getMesKey();
       os.dataFechamento=new Date().toISOString();
       os.dataAprovacao=new Date().toISOString();
