@@ -1092,6 +1092,7 @@ select option{background:#0a1e38;}
 <div class="modal-overlay" id="modal-ag-dia">
   <div class="modal" style="max-width:580px;">
     <div class="modal-title" id="modal-ag-dia-title">📅 Serviços do dia</div>
+    <div id="modal-ag-dia-sub" style="font-size:13px;color:var(--muted);margin:-10px 0 14px;"></div>
     <div id="modal-ag-dia-body"></div>
     <div class="brow" style="margin-top:16px;">
       <button class="btn btn-o" onclick="fecharModal('modal-ag-dia')" style="flex:1;">Fechar</button>
@@ -3024,6 +3025,17 @@ function abrirDiaAgenda(dStr,dNum){
   const ags=[...agsReais,...agsVirtuais];
   const dt=new Date(dStr+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
   document.getElementById('modal-ag-dia-title').textContent='📅 '+dt;
+  // Total do dia — soma todos os clientes não cancelados (mesma regra usada nos badges do calendário)
+  const todasOSMapaDia={};
+  getTodasOS().forEach(o=>{todasOSMapaDia[o.id]=o;});
+  const agsValidos=ags.filter(a=>{const os=todasOSMapaDia[a.osId];return os&&os.status!=='cancelado';});
+  const totalDia=agsValidos.reduce((s,a)=>s+parseFloat(a.valor||0),0);
+  const subEl=document.getElementById('modal-ag-dia-sub');
+  if(subEl){
+    subEl.textContent = agsValidos.length>0
+      ? `${agsValidos.length} serviço${agsValidos.length!==1?'s':''} · Total: ${fmtMoeda(totalDia)}`
+      : '';
+  }
   if(!ags.length){
     document.getElementById('modal-ag-dia-body').innerHTML='<div class="empty">Nenhum serviço neste dia</div>';
   } else {
@@ -4555,6 +4567,10 @@ function remarcarAg(agId){
     const novaHora=document.getElementById('modal-remarcar-hora').value;
     if(!novaData||!novaHora){toast('⚠️ Informe data e horário',true);return;}
     ag.data=novaData;ag.hora=novaHora;ag.status='confirmado';ag.updatedAt=Date.now();
+    // "Remarcar" move o serviço para UMA nova data — qualquer "Dia 2" antigo
+    // (de um agendamento de 2 dias anterior) é descartado para não duplicar
+    // o cliente em dois dias diferentes do calendário.
+    ag.data2=null;
     salvarLocal({agenda:true});
     fecharModal('modal-remarcar');fecharModal('modal-ag-dia');
     rendAgenda();
