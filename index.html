@@ -717,6 +717,11 @@ select option{background:#0a1e38;}
         <div class="fat-kpi-val" id="fat-total-geral" style="font-size:16px;">R$ 0,00</div>
         <div class="fat-kpi-sub">Todos os meses</div>
       </div>
+      <div class="fat-kpi-card">
+        <div class="fat-kpi-label">Lucro do mês</div>
+        <div class="fat-kpi-val" id="fat-lucro-mes">R$ 0,00</div>
+        <div class="fat-kpi-sub">Faturamento − despesas</div>
+      </div>
     </div>
 
     <!-- Meta Mensal -->
@@ -765,6 +770,32 @@ select option{background:#0a1e38;}
     <div class="card" style="margin-bottom:16px;">
       <div class="ctitle">💳 Recebimentos por Forma de Pagamento</div>
       <div id="fat-pgto-breakdown"><div class="empty" style="font-size:12px;">Sem dados este mês</div></div>
+    </div>
+
+    <!-- Despesas do mês -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="ctitle">💸 Despesas do Mês</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="font-size:13px;color:var(--muted);">Total de saídas</span>
+        <span style="font-size:16px;font-weight:700;color:var(--red);" id="despesas-total-mes">R$ 0,00</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <input type="number" id="desp-valor" placeholder="Valor (R$)" style="width:110px;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;">
+        <select id="desp-categoria" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;">
+          <option>Produtos de limpeza</option>
+          <option>Combustível/Deslocamento</option>
+          <option>Equipamentos</option>
+          <option>Manutenção</option>
+          <option>Taxa de maquininha</option>
+          <option>Marketing</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="text" id="desp-descricao" placeholder="Descrição (opcional)" style="flex:1;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;">
+        <button class="btn btn-g" onclick="addDespesa()" style="padding:9px 14px;font-size:13px;white-space:nowrap;">➕ Add</button>
+      </div>
+      <div id="despesas-lista"></div>
     </div>
 
     <!-- Lista vendas fechadas do mês -->
@@ -1069,6 +1100,13 @@ select option{background:#0a1e38;}
             <option value="Cartão 3x">💳 Cartão 3x</option>
             <option value="Cartão 4x">💳 Cartão 4x</option>
             <option value="Cartão 5x">💳 Cartão 5x</option>
+            <option value="Cartão 6x">💳 Cartão 6x</option>
+            <option value="Cartão 7x">💳 Cartão 7x</option>
+            <option value="Cartão 8x">💳 Cartão 8x</option>
+            <option value="Cartão 9x">💳 Cartão 9x</option>
+            <option value="Cartão 10x">💳 Cartão 10x</option>
+            <option value="Cartão 11x">💳 Cartão 11x</option>
+            <option value="Cartão 12x">💳 Cartão 12x</option>
           </select>
         </div>
         <!-- CAMPO DIA 2 — serviços de 2 dias -->
@@ -1179,6 +1217,13 @@ select option{background:#0a1e38;}
         <option value="Cartão 3x">💳 Cartão 3x</option>
         <option value="Cartão 4x">💳 Cartão 4x</option>
         <option value="Cartão 5x">💳 Cartão 5x</option>
+        <option value="Cartão 6x">💳 Cartão 6x</option>
+        <option value="Cartão 7x">💳 Cartão 7x</option>
+        <option value="Cartão 8x">💳 Cartão 8x</option>
+        <option value="Cartão 9x">💳 Cartão 9x</option>
+        <option value="Cartão 10x">💳 Cartão 10x</option>
+        <option value="Cartão 11x">💳 Cartão 11x</option>
+        <option value="Cartão 12x">💳 Cartão 12x</option>
       </select>
     </div>
     <div class="brow">
@@ -1335,6 +1380,7 @@ async function _fbSalvarReal() {
       ordens:       JSON.stringify(window._sc.ordens),
       historico:    JSON.stringify(window._sc.historico),
       agendamentos: JSON.stringify(window._sc.agendamentos),
+      despesas:     JSON.stringify(window._sc.despesas),
       tipos:        JSON.stringify(window._sc.tipos),
       precos:       JSON.stringify(window._sc.precos),
       mesAtual:     getMesKey(), // sempre o mês real
@@ -1408,6 +1454,7 @@ onSnapshot(REF, (snap) => {
     if(d.ordens)       { window._sc.ordens       = JSON.parse(d.ordens);       localStorage.setItem('sc_ordens',     d.ordens); }
     if(d.historico)    { window._sc.historico    = JSON.parse(d.historico);    localStorage.setItem('sc_historico',  d.historico); }
     if(d.agendamentos) { window._sc.agendamentos = JSON.parse(d.agendamentos); localStorage.setItem('sc_agenda',     d.agendamentos); }
+    if(d.despesas)     { window._sc.despesas     = JSON.parse(d.despesas);     localStorage.setItem('sc_despesas',   d.despesas); }
     if(d.tipos)        { window._sc.tipos        = JSON.parse(d.tipos)||window._sc.TIPOS_DEFAULT; localStorage.setItem('sc_tipos', d.tipos); }
     if(d.precos)       { window._sc.precos       = JSON.parse(d.precos);       localStorage.setItem('sc_precos',     d.precos); }
     // mesAtual não é mais sincronizado — é sempre getMesKey() local
@@ -1437,6 +1484,7 @@ Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]
       if(d.ordens)       localStorage.setItem('sc_ordens',     d.ordens);
       if(d.historico)    localStorage.setItem('sc_historico',  d.historico);
       if(d.agendamentos) localStorage.setItem('sc_agenda',     d.agendamentos);
+      if(d.despesas)     localStorage.setItem('sc_despesas',   d.despesas);
       if(d.tipos)        localStorage.setItem('sc_tipos',      d.tipos);
       if(d.precos)       localStorage.setItem('sc_precos',     d.precos);
       // mesAtual não restaurado do Firebase — sempre usa calendário real
@@ -1470,6 +1518,14 @@ const TIPOS_DEFAULT=[
 ];
 const SERVICOS={hig:'Higienização',imp:'Impermeabilização',amb:'Hig. + Imper.'};
 const PRECO_DEFAULT={hig:100,imp:80,amb:170};
+// Taxas da maquininha (Visa/Mastercard) — % descontado automaticamente como despesa ao marcar OS como executada
+const TAXA_MAQUININHA={
+  'PIX':0,'Dinheiro':0,
+  'Cartão Débito':1.37,'Cartão Crédito':3.15,
+  'Cartão 2x':5.39,'Cartão 3x':6.12,'Cartão 4x':6.85,'Cartão 5x':7.57,
+  'Cartão 6x':8.28,'Cartão 7x':8.99,'Cartão 8x':9.69,'Cartão 9x':10.38,
+  'Cartão 10x':11.06,'Cartão 11x':11.74,'Cartão 12x':12.40
+};
 const GOOGLE_REVIEW_LINK='https://g.page/r/CXaI0LdjqAC3EBM/review';
 const MSGS_REAT=[
   (nome)=>`Olá, ${nome}! 👋\n\nJá faz algum tempo desde sua última higienização conosco.\n\nCom o passar dos meses, *ácaros, fungos, bactérias* e sujeiras invisíveis voltam a se acumular nos estofados, podendo causar alergias e desconfortos para toda a família. 😷\n\nComo você já é cliente da *SUPER CLEAN - Higienização*, liberamos uma *condição especial de retorno*.\n\n🎁 *Desconto exclusivo para clientes antigos.*\n\nEssa condição ficará disponível por tempo limitado.\n\nGostaria de receber uma nova avaliação sem compromisso? Será um prazer atender você novamente! 🛋️✨\n\n📞 (67) 99225-3296\n🌐 supercleandourados.com.br`,
@@ -1510,6 +1566,7 @@ let clientes   = [];
 let ordens     = [];
 let historico  = [];
 let agendamentos = [];
+let despesas   = [];
 let tipos      = TIPOS_DEFAULT;
 let precos     = {};
 // mesAtual é sempre o mês real do calendário — automático, sem virada manual
@@ -1532,6 +1589,8 @@ window._sc = {
   set historico(v)   { historico = v; },
   get agendamentos() { return agendamentos; },
   set agendamentos(v){ agendamentos = v; },
+  get despesas()     { return despesas; },
+  set despesas(v)    { despesas = v; },
   get tipos()        { return tipos; },
   set tipos(v)       { tipos = v; },
   get precos()       { return precos; },
@@ -1720,12 +1779,13 @@ function init(){
       ordens       = JSON.parse(localStorage.getItem('sc_ordens')     ||'[]');
       historico    = JSON.parse(localStorage.getItem('sc_historico')  ||'[]');
       agendamentos = JSON.parse(localStorage.getItem('sc_agenda')     ||'[]');
+      despesas     = JSON.parse(localStorage.getItem('sc_despesas')   ||'[]');
       tipos        = JSON.parse(localStorage.getItem('sc_tipos')      ||'null') || TIPOS_DEFAULT;
       precos       = JSON.parse(localStorage.getItem('sc_precos')     ||'{}');
     } catch(e) {
       // localStorage corrompido — iniciar com dados vazios (não trava o app)
       console.warn('localStorage corrompido, iniciando zerado:', e);
-      clientes=[]; ordens=[]; historico=[]; agendamentos=[];
+      clientes=[]; ordens=[]; historico=[]; agendamentos=[]; despesas=[];
       tipos=TIPOS_DEFAULT; precos={};
     }
     mesAtual  = getMesKey(); // Sempre usa o mês real — sem virada manual
@@ -1803,7 +1863,7 @@ function _alertarQuotaLS() {
 }
 
 // ============ salvarLocal — versão granular ============
-// opts: true/false (legado = salva tudo) | { ordens, agenda, clientes, historico, tipos, precos, counter, _semRender }
+// opts: true/false (legado = salva tudo) | { ordens, agenda, clientes, historico, tipos, precos, counter, despesas, _semRender }
 function salvarLocal(opts) {
   if(typeof invalidarCatCache === 'function') invalidarCatCache();
   invalidarOSCache();
@@ -1819,6 +1879,7 @@ function salvarLocal(opts) {
   if(tudo || opts?.ordens)    _lsSet('sc_ordens',     JSON.stringify(ordens));
   if(tudo || opts?.historico) _lsSet('sc_historico',  JSON.stringify(historico));
   if(tudo || opts?.agenda)    _lsSet('sc_agenda',     JSON.stringify(agendamentos));
+  if(tudo || opts?.despesas)  _lsSet('sc_despesas',   JSON.stringify(despesas));
   if(tudo || opts?.tipos)     _lsSet('sc_tipos',      JSON.stringify(tipos));
   if(tudo || opts?.precos)    _lsSet('sc_precos',     JSON.stringify(precos));
   if(tudo || opts?.counter)   _lsSet('sc_os_counter', String(osCounter));
@@ -3253,6 +3314,68 @@ function getFechadasTodas(){
   _fatCacheKey = k;
   return _fatCache;
 }
+function getDespesasMes(){
+  const key=getMesKey();
+  return despesas.filter(d=>d.data&&d.data.slice(0,7)===key);
+}
+function addDespesa(){
+  const valEl=document.getElementById('desp-valor');
+  const catEl=document.getElementById('desp-categoria');
+  const descEl=document.getElementById('desp-descricao');
+  const valor=parseFloat(valEl.value);
+  if(!valor||valor<=0){toast('⚠️ Informe um valor válido',true);return;}
+  despesas.push({
+    id: Date.now(),
+    valor,
+    categoria: catEl.value,
+    descricao: (descEl.value||'').trim(),
+    data: today(),
+    createdAt: Date.now()
+  });
+  salvarLocal({despesas:true});
+  valEl.value=''; descEl.value='';
+  toast('💸 Despesa registrada');
+}
+function rmDespesa(id){
+  const d=despesas.find(x=>x.id===id);
+  if(!d)return;
+  confirmar(
+    '🗑️ Excluir despesa',
+    `Excluir "${d.categoria}" de ${fmtMoeda(d.valor)}?`,
+    '🗑️ Excluir','btn-d',
+    ()=>{
+      despesas=despesas.filter(x=>x.id!==id);
+      salvarLocal({despesas:true});
+      toast('🗑️ Despesa excluída');
+    }
+  );
+}
+function rendDespesas(fatMes){
+  const mesDesp=getDespesasMes();
+  const totalDesp=mesDesp.reduce((a,d)=>a+parseFloat(d.valor||0),0);
+  const totalEl=document.getElementById('despesas-total-mes');
+  if(totalEl)totalEl.textContent=fmtMoeda(totalDesp);
+  const lucroEl=document.getElementById('fat-lucro-mes');
+  if(lucroEl){
+    const lucro=(fatMes||0)-totalDesp;
+    lucroEl.textContent=fmtMoeda(lucro);
+    lucroEl.style.color=lucro<0?'var(--red)':'var(--green)';
+  }
+  const listaEl=document.getElementById('despesas-lista');
+  if(!listaEl)return;
+  if(!mesDesp.length){listaEl.innerHTML='<div class="empty" style="font-size:12px;">Nenhuma despesa este mês</div>';return;}
+  listaEl.innerHTML=mesDesp.sort((a,b)=>b.createdAt-a.createdAt).map(d=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);gap:8px;">
+      <div style="min-width:0;">
+        <div style="font-size:13px;color:#fff;font-weight:600;">${d.categoria}${d.descricao?' · '+d.descricao:''}</div>
+        <div style="font-size:11px;color:var(--muted);">${fmtData(d.data)}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <span style="font-size:14px;font-weight:700;color:var(--red);">-${fmtMoeda(d.valor)}</span>
+        <button onclick="rmDespesa(${d.id})" title="Excluir" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;">✕</button>
+      </div>
+    </div>`).join('');
+}
 function rendFaturamento(){
   const mesOrd=getFechadasMes();
   const todasFech=getFechadasTodas();
@@ -3277,6 +3400,9 @@ function rendFaturamento(){
   document.getElementById('fat-clientes').textContent=cliAtend;
   document.getElementById('fat-servicos').textContent=srvMes;
   document.getElementById('fat-total-geral').textContent=fmtMoeda(fatGeral);
+
+  // Despesas do mês + Lucro
+  rendDespesas(fatMes);
 
   // Dashboard stats
   document.getElementById('s-fat-mes').textContent=fatMes>=1000?'R$ '+(fatMes/1000).toFixed(1)+'k':fmtMoeda(fatMes);
@@ -4431,7 +4557,7 @@ function showCloudToast(){
 
 let _tabAtual = 'home';
 function mudarTab(t){
-  const tabs=['home','nova-os','hist','agenda','faturamento','clientes','reat','config'];
+  const tabs=['home','nova-os','hist','agenda','faturamento','clientes','reat','resgate','config'];
   tabs.forEach((x,i)=>{
     const btn=document.querySelectorAll('.tab')[i];
     if(btn)btn.classList.toggle('active',x===t);
@@ -4551,11 +4677,31 @@ function marcarExecutado(agId){
     os.executado=true;
     os.dataExecucao=new Date().toISOString();
     os.updatedAt=Date.now();
-    salvarLocal({ordens:true});
+    const taxaLancada=lancarTaxaMaquininha(os);
+    salvarLocal({ordens:true,despesas:taxaLancada});
     fecharModal('modal-ag-dia');
     rendAgenda();
     toast('✅ Serviço marcado como executado!');
   });
+}
+// Lança automaticamente a taxa da maquininha como despesa quando a OS é executada com pagamento em cartão
+function lancarTaxaMaquininha(os){
+  const pct=TAXA_MAQUININHA[os.formaPgto];
+  if(!pct)return false; // PIX, Dinheiro ou forma não informada — sem taxa
+  if(despesas.some(d=>d.auto&&d.osId===os.id))return false; // já lançada
+  const valor=parseFloat(((os.total||0)*pct/100).toFixed(2));
+  if(valor<=0)return false;
+  despesas.push({
+    id: Date.now(),
+    valor,
+    categoria: 'Taxa de maquininha',
+    descricao: `OS #${String(os.numero).padStart(4,'0')} · ${os.cliNome} (${os.formaPgto} · ${pct}%)`,
+    data: today(),
+    createdAt: Date.now(),
+    osId: os.id,
+    auto: true
+  });
+  return true;
 }
 
 function desfazerExecutado(agId){
@@ -4568,7 +4714,9 @@ function desfazerExecutado(agId){
     os.executado=false;
     delete os.dataExecucao;
     os.updatedAt=Date.now();
-    salvarLocal({ordens:true});
+    const tinhaTaxa=despesas.some(d=>d.auto&&d.osId===os.id);
+    if(tinhaTaxa)despesas=despesas.filter(d=>!(d.auto&&d.osId===os.id));
+    salvarLocal({ordens:true,despesas:tinhaTaxa});
     fecharModal('modal-ag-dia');
     rendAgenda();
     toast('↩️ Execução desfeita — serviço voltou para Agendado.');
