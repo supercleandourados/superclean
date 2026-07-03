@@ -631,7 +631,7 @@ select option{background:#0a1e38;}
         <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;">
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Ticket médio</div>
           <div style="font-size:18px;font-weight:800;color:#fff;" id="ag-ticket">R$ 0,00</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px;">por serviço aprovado</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;">por serviço agendado</div>
         </div>
       </div>
 
@@ -915,9 +915,6 @@ select option{background:#0a1e38;}
       <div id="resumo-cal"></div>
     </div>
   </div>
-  <div id="tab-historico" class="tbc" style="display:none!important;">
-    <div id="lista-historico"></div>
-  </div>
   <div id="tab-reat" class="tbc">
     <div class="modal-title-h">🔔 Clientes para Reativar</div>
     <div class="modal-sub-txt">Clientes com serviço fechado há 6+ meses</div>
@@ -1181,12 +1178,12 @@ select option{background:#0a1e38;}
 <!-- MODAL APROVAR OS (data/hora sem prompt) -->
 <div class="modal-overlay" id="modal-aprovar-os">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-title">✅ Aprovar Serviço</div>
+    <div class="modal-title">📅 Agendar Serviço</div>
     <div class="field"><label>Data do Serviço *</label><input type="date" id="modal-aprovar-data"></div>
     <div class="field"><label>Horário *</label><input type="time" id="modal-aprovar-hora" value="08:00"></div>
     <div class="brow">
       <button class="btn btn-o" onclick="fecharModal('modal-aprovar-os')" style="flex:1;">Cancelar</button>
-      <button class="btn btn-g" id="modal-aprovar-ok" style="flex:1;">✅ Aprovar</button>
+      <button class="btn btn-g" id="modal-aprovar-ok" style="flex:1;">📅 Agendar</button>
     </div>
   </div>
 </div>
@@ -1323,9 +1320,17 @@ let _fbSalvarTimer = null;
 // cada OS/agendamento individual só é sobrescrito se a outra versão for
 // realmente mais nova (updatedAt). Evita que uma aba/aparelho desatualizado
 // apague uma remarcação ou execução feita em outro dispositivo há poucos segundos.
-function mesclarPorId(arrLocal, arrCloud) {
+// idsExcluidos: Set de ids (string) marcados como excluídos de propósito — impede
+// que um item ausente localmente (porque foi excluído) volte da nuvem como se
+// fosse só uma pendência de sincronização.
+function mesclarPorId(arrLocal, arrCloud, idsExcluidos) {
+  const excluidos = idsExcluidos || new Set();
   const mapa = {};
-  (arrCloud||[]).forEach(item => { if(item && item.id!==undefined && item.id!==null) mapa[item.id] = item; });
+  (arrCloud||[]).forEach(item => {
+    if(!item || item.id===undefined || item.id===null) return;
+    if(excluidos.has(String(item.id))) return;
+    mapa[item.id] = item;
+  });
   (arrLocal||[]).forEach(item => {
     if(!item || item.id===undefined || item.id===null) return;
     const cloudItem = mapa[item.id];
@@ -1353,12 +1358,25 @@ async function _fbSalvarReal() {
       const snapAtual = await getDoc(REF);
       if (snapAtual.exists()) {
         const dCloud = snapAtual.data();
+        // Une tombstones locais e da nuvem primeiro — precisa estar pronto antes de mesclar ordens/agenda
+        if (dCloud.deletados) {
+          const mapaDel = {};
+          [...(window._sc.deletados||[]), ...JSON.parse(dCloud.deletados)].forEach(d=>{
+            if(!d||d.id===undefined||d.id===null) return;
+            const k=d.tipo+'_'+d.id;
+            if(!mapaDel[k]||(d.ts||0)>(mapaDel[k].ts||0)) mapaDel[k]=d;
+          });
+          window._sc.deletados = Object.values(mapaDel);
+          localStorage.setItem('sc_deletados', JSON.stringify(window._sc.deletados));
+        }
+        const idsOsExcluidos = new Set(window._sc.deletados.filter(d=>d.tipo==='os').map(d=>String(d.id)));
+        const idsAgExcluidos = new Set(window._sc.deletados.filter(d=>d.tipo==='ag').map(d=>String(d.id)));
         if (dCloud.ordens) {
-          window._sc.ordens = mesclarPorId(window._sc.ordens, JSON.parse(dCloud.ordens));
+          window._sc.ordens = mesclarPorId(window._sc.ordens, JSON.parse(dCloud.ordens), idsOsExcluidos);
           localStorage.setItem('sc_ordens', JSON.stringify(window._sc.ordens));
         }
         if (dCloud.agendamentos) {
-          window._sc.agendamentos = mesclarPorId(window._sc.agendamentos, JSON.parse(dCloud.agendamentos));
+          window._sc.agendamentos = mesclarPorId(window._sc.agendamentos, JSON.parse(dCloud.agendamentos), idsAgExcluidos);
           localStorage.setItem('sc_agenda', JSON.stringify(window._sc.agendamentos));
         }
       }
@@ -1371,6 +1389,7 @@ async function _fbSalvarReal() {
       historico:    JSON.stringify(window._sc.historico),
       agendamentos: JSON.stringify(window._sc.agendamentos),
       despesas:     JSON.stringify(window._sc.despesas),
+      deletados:    JSON.stringify(window._sc.deletados),
       tipos:        JSON.stringify(window._sc.tipos),
       precos:       JSON.stringify(window._sc.precos),
       mesAtual:     getMesKey(), // sempre o mês real
@@ -1445,6 +1464,16 @@ onSnapshot(REF, (snap) => {
     if(d.historico)    { window._sc.historico    = JSON.parse(d.historico);    localStorage.setItem('sc_historico',  d.historico); }
     if(d.agendamentos) { window._sc.agendamentos = JSON.parse(d.agendamentos); localStorage.setItem('sc_agenda',     d.agendamentos); }
     if(d.despesas)     { window._sc.despesas     = JSON.parse(d.despesas);     localStorage.setItem('sc_despesas',   d.despesas); }
+    if(d.deletados)    {
+      const mapaDel={};
+      [...(window._sc.deletados||[]), ...JSON.parse(d.deletados)].forEach(x=>{
+        if(!x||x.id===undefined||x.id===null) return;
+        const k=x.tipo+'_'+x.id;
+        if(!mapaDel[k]||(x.ts||0)>(mapaDel[k].ts||0)) mapaDel[k]=x;
+      });
+      window._sc.deletados = Object.values(mapaDel);
+      localStorage.setItem('sc_deletados', JSON.stringify(window._sc.deletados));
+    }
     if(d.tipos)        { window._sc.tipos        = JSON.parse(d.tipos)||window._sc.TIPOS_DEFAULT; localStorage.setItem('sc_tipos', d.tipos); }
     if(d.precos)       { window._sc.precos       = JSON.parse(d.precos);       localStorage.setItem('sc_precos',     d.precos); }
     // mesAtual não é mais sincronizado — é sempre getMesKey() local
@@ -1476,6 +1505,7 @@ Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]
       if(d.agendamentos) localStorage.setItem('sc_agenda',     d.agendamentos);
       if(d.despesas)     localStorage.setItem('sc_despesas',   d.despesas);
       if(d.tipos)        localStorage.setItem('sc_tipos',      d.tipos);
+      if(d.deletados)    localStorage.setItem('sc_deletados',  d.deletados);
       if(d.precos)       localStorage.setItem('sc_precos',     d.precos);
       // mesAtual não restaurado do Firebase — sempre usa calendário real
       if(d.osCounter)    localStorage.setItem('sc_os_counter', d.osCounter);
@@ -1557,6 +1587,9 @@ let ordens     = [];
 let historico  = [];
 let agendamentos = [];
 let despesas   = [];
+// Tombstones de exclusão — {tipo:'os'|'ag', id, ts} — impede que um registro excluído
+// "ressuscite" ao sincronizar com a nuvem (ver mesclarPorId no bloco Firebase).
+let deletados  = [];
 let tipos      = TIPOS_DEFAULT;
 let precos     = {};
 // mesAtual é sempre o mês real do calendário — automático, sem virada manual
@@ -1581,6 +1614,8 @@ window._sc = {
   set agendamentos(v){ agendamentos = v; },
   get despesas()     { return despesas; },
   set despesas(v)    { despesas = v; },
+  get deletados()    { return deletados; },
+  set deletados(v)   { deletados = v; },
   get tipos()        { return tipos; },
   set tipos(v)       { tipos = v; },
   get precos()       { return precos; },
@@ -1770,14 +1805,18 @@ function init(){
       historico    = JSON.parse(localStorage.getItem('sc_historico')  ||'[]');
       agendamentos = JSON.parse(localStorage.getItem('sc_agenda')     ||'[]');
       despesas     = JSON.parse(localStorage.getItem('sc_despesas')   ||'[]');
+      deletados    = JSON.parse(localStorage.getItem('sc_deletados')  ||'[]');
       tipos        = JSON.parse(localStorage.getItem('sc_tipos')      ||'null') || TIPOS_DEFAULT;
       precos       = JSON.parse(localStorage.getItem('sc_precos')     ||'{}');
     } catch(e) {
       // localStorage corrompido — iniciar com dados vazios (não trava o app)
       console.warn('localStorage corrompido, iniciando zerado:', e);
-      clientes=[]; ordens=[]; historico=[]; agendamentos=[]; despesas=[];
+      clientes=[]; ordens=[]; historico=[]; agendamentos=[]; despesas=[]; deletados=[];
       tipos=TIPOS_DEFAULT; precos={};
     }
+    // Poda tombstones com mais de 180 dias — já teriam sido sincronizados em todo dispositivo
+    const _limiteTombstone=Date.now()-180*24*60*60*1000;
+    deletados=(deletados||[]).filter(d=>d&&(d.ts||0)>_limiteTombstone);
     mesAtual  = getMesKey(); // Sempre usa o mês real — sem virada manual
     osCounter = parseInt(localStorage.getItem('sc_os_counter') ||'0');
     meta      = parseFloat(localStorage.getItem('sc_meta')     ||'0');
@@ -1800,8 +1839,6 @@ function init(){
     setTimeout(()=>verificarBackupAutomatico(), 2000);
     setTimeout(()=>verificarMesNovo(), 3000);
     setTimeout(()=>arquivarOSAntigas(), 5000); // arquivamento silencioso
-    const syncEl = document.getElementById('fb-sync-status');
-    if (syncEl) syncEl.style.display = 'flex';
   }
   document.addEventListener('click',e=>{
     if(!document.getElementById('ac-wrap').contains(e.target))
@@ -1852,6 +1889,24 @@ function _alertarQuotaLS() {
   }, 500);
 }
 
+// Detecta ids que existiam no snapshot anterior (localStorage) e não existem mais no
+// array atual, e registra um tombstone — impede que a mesclagem com a nuvem
+// "ressuscite" um registro que foi excluído de propósito (ver mesclarPorId).
+function _marcarExcluidos(tipo, chaveLs, arrAtual){
+  let antigos=[];
+  try{ antigos=JSON.parse(localStorage.getItem(chaveLs)||'[]'); }catch(e){ antigos=[]; }
+  if(!antigos.length) return;
+  const idsAtuais=new Set(arrAtual.map(x=>String(x.id)));
+  const agora=Date.now();
+  antigos.forEach(item=>{
+    if(!item||item.id===undefined||item.id===null) return;
+    const idStr=String(item.id);
+    if(idsAtuais.has(idStr)) return;
+    if(deletados.some(d=>d.tipo===tipo&&String(d.id)===idStr)) return; // já marcado
+    deletados.push({tipo,id:item.id,ts:agora});
+  });
+}
+
 // ============ salvarLocal — versão granular ============
 // opts: true/false (legado = salva tudo) | { ordens, agenda, clientes, historico, tipos, precos, counter, despesas, _semRender }
 function salvarLocal(opts) {
@@ -1865,11 +1920,15 @@ function salvarLocal(opts) {
 
   _lsSet('sc_local_ts', String(Date.now()));
 
+  if(tudo || opts?.ordens)    _marcarExcluidos('os','sc_ordens',ordens);
+  if(tudo || opts?.agenda)    _marcarExcluidos('ag','sc_agenda',agendamentos);
+
   if(tudo || opts?.clientes)  _lsSet('sc_clientes',   JSON.stringify(clientes));
   if(tudo || opts?.ordens)    _lsSet('sc_ordens',     JSON.stringify(ordens));
   if(tudo || opts?.historico) _lsSet('sc_historico',  JSON.stringify(historico));
   if(tudo || opts?.agenda)    _lsSet('sc_agenda',     JSON.stringify(agendamentos));
   if(tudo || opts?.despesas)  _lsSet('sc_despesas',   JSON.stringify(despesas));
+  if(tudo || opts?.ordens || opts?.agenda) _lsSet('sc_deletados', JSON.stringify(deletados));
   if(tudo || opts?.tipos)     _lsSet('sc_tipos',      JSON.stringify(tipos));
   if(tudo || opts?.precos)    _lsSet('sc_precos',     JSON.stringify(precos));
   if(tudo || opts?.counter)   _lsSet('sc_os_counter', String(osCounter));
@@ -1935,14 +1994,6 @@ function _salvarClienteCommon(nome, wpp, end, cbClear){
   updStats();rendClientes();
   toast('✅ Cliente "'+nome+'" cadastrado!');
   return true;
-}
-function salvarCliente(){
-  const nome=document.getElementById('nc-nome').value.trim();
-  const wpp =document.getElementById('nc-wpp').value.trim();
-  const end  =document.getElementById('nc-end').value.trim();
-  _salvarClienteCommon(nome,wpp,end,()=>{
-    ['nc-nome','nc-wpp','nc-end'].forEach(id=>document.getElementById(id).value='');
-  });
 }
 function buscaCliente(q){
   const list=document.getElementById('ac-list');
@@ -2466,8 +2517,6 @@ function salvarOS(){
   const descTipo=document.getElementById('t-desc-tipo')?.value||'R$';
   const desconto=descTipo==='%'?(sub*descVal/100):descVal;
   const total=Math.max(0,sub-desconto);
-  const dataServPrev=document.getElementById('data-servico-prev')?.value||'';
-  const horaServPrev=document.getElementById('hora-servico-prev')?.value||'';
   osCounter++;
   const os={
     id:Date.now(),numero:osCounter,
@@ -2478,8 +2527,6 @@ function salvarOS(){
     status:'pendente',
     executado:false,
     dataCriacao:new Date().toISOString(),mes:getMesKey(), // mês real automático
-    dataServico:dataServPrev||undefined,
-    horaServico:horaServPrev||undefined,
   };
   ordens.push(os);salvarLocal({ordens:true,counter:true});
   toast('✅ OS #'+String(osCounter).padStart(4,'0')+' salva!');
@@ -2490,12 +2537,6 @@ function salvarOS(){
   document.getElementById('totais-box').style.display='none';
   ic=0;addItem();
   document.getElementById('data-orc').value=hoje();
-  const dspEl=document.getElementById('data-servico-prev');
-  if(dspEl)dspEl.value='';
-  const hspEl=document.getElementById('hora-servico-prev');
-  if(hspEl)hspEl.value='08:00';
-  const horaCampo=document.getElementById('hora-servico-field');
-  if(horaCampo)horaCampo.style.display='none';
   const tdEl=document.getElementById('t-desc-val');
   if(tdEl)tdEl.value='0';
   document.getElementById('os-num-badge').textContent='OS #'+String(osCounter+1).padStart(4,'0');
@@ -2588,7 +2629,7 @@ function updStatusShare(){
     const dataAg=document.getElementById('share-data-ag').value;
     const horaAg=document.getElementById('share-hora-ag').value;
     if(!dataAg||!horaAg){
-      toast('⚠️ Para aprovar, informe a data e horário do agendamento.',true);
+      toast('⚠️ Para agendar, informe a data e horário do agendamento.',true);
       document.getElementById('share-status-sel').value=antigo;
       agInfoEl.style.display='block';
       return;
@@ -3537,53 +3578,6 @@ function amanha(){
   const d=new Date();d.setDate(d.getDate()+1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
-function rendHistoricoCompleto(){
-  const buscaEl=document.getElementById('hist-busca');
-  const busca=(buscaEl?.value||'').toLowerCase().trim();
-  const el=document.getElementById('lista-historico');
-
-  // Histórico = todas as OS resolvidas: aprovadas e canceladas
-  const todasResolvidas = getTodasOS().filter(o=>o.status!=='pendente');
-
-  // Filtrar por busca
-  const filtradas = busca
-    ? todasResolvidas.filter(o=>o.cliNome?.toLowerCase().includes(busca)||String(o.numero).includes(busca))
-    : todasResolvidas;
-
-  if(!filtradas.length){
-    el.innerHTML='<div class="empty">Nenhum serviço fechado ainda</div>';
-    return;
-  }
-
-  // Agrupar por mês de fechamento (dataFechamento ou dataCriacao)
-  const grupos={};
-  filtradas.forEach(o=>{
-    const df = o.dataFechamento||o.dataCriacao||'';
-    const key = df.slice(0,7); // YYYY-MM
-    if(!grupos[key])grupos[key]=[];
-    grupos[key].push(o);
-  });
-
-  // Ordenar meses do mais recente ao mais antigo
-  const mesesOrdenados=Object.keys(grupos).sort((a,b)=>b.localeCompare(a));
-
-  el.innerHTML=mesesOrdenados.map(key=>{
-    const oss=grupos[key].sort((a,b)=>new Date(b.dataFechamento||b.dataCriacao)-new Date(a.dataFechamento||a.dataCriacao));
-    const totalMes=oss.filter(o=>o.status==='aprovado').reduce((a,o)=>a+parseFloat(o.total||0),0);
-    const nAprov=oss.filter(o=>o.status==='aprovado').length;
-    const nCanc=oss.filter(o=>o.status==='cancelado').length;
-    const mid='mes_'+key.replace('-','_');
-    return `<div class="mes-group">
-      <div class="mes-header" onclick="document.getElementById('${mid}').classList.toggle('open')">
-        <div class="mes-title">📅 ${getMesLabel(key)}</div>
-        <div class="mes-stats">${nAprov>0?'🟢 '+nAprov+' agendada'+(nAprov!==1?'s':''):''}${nAprov>0&&nCanc>0?' · ':''}${nCanc>0?'🔴 '+nCanc+' cancelada'+(nCanc!==1?'s':''):''}${nAprov>0?' · '+fmtMoeda(totalMes):''}</div>
-      </div>
-      <div class="mes-body" id="${mid}">
-        ${oss.map(o=>`${renderOS(o,false,true)}<div style="margin-bottom:4px;"><button class="btn" style="padding:5px 10px;font-size:11px;background:rgba(100,180,255,.12);color:var(--sky);border:1px solid rgba(100,180,255,.3);margin-top:-4px;" onclick="abrirCompartilhar(${o.id})">📤 Compartilhar</button></div>`).join('')}
-      </div>
-    </div>`;
-  }).join('');
-}
 function confirmarVirarMes(){
   // Virada de mês agora é automática — esta função não faz mais nada
   toast('✅ O sistema vira o mês automaticamente pelo calendário!');
@@ -3984,7 +3978,6 @@ function debounce(fn, delay){
 }
 const debounceBusca = debounce(buscaCliente, 250);
 const debounceRendCli = debounce(rendClientes, 300);
-const debounceRendHist = debounce(rendHistoricoCompleto, 300);
 
 function calcPascoa(ano){
   const a=ano%19,b=Math.floor(ano/100),c=ano%100;
@@ -4416,7 +4409,7 @@ function rendResumoOrc(){
         <div class="resumo-kpi-val">${fmtMoeda(soma(total))}</div>
       </div>
       <div class="resumo-kpi-card ap">
-        <div class="resumo-kpi-label">✅ Aprovados</div>
+        <div class="resumo-kpi-label">✅ Agendados</div>
         <div class="resumo-kpi-qtd">${aprov.length}</div>
         <div class="resumo-kpi-val">${fmtMoeda(soma(aprov))}</div>
       </div>
@@ -4438,7 +4431,7 @@ function rendResumoOrc(){
   if(badgesEl){
     badgesEl.innerHTML = `
       <div style="display:flex;align-items:center;gap:6px;background:rgba(76,175,34,.12);border:1px solid rgba(76,175,34,.3);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--green);">
-        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>${aprov.length} aprovados
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>${aprov.length} agendados
       </div>
       <div style="display:flex;align-items:center;gap:6px;background:rgba(255,140,0,.12);border:1px solid rgba(255,140,0,.3);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--orange);">
         <span style="width:8px;height:8px;border-radius:50%;background:var(--orange);display:inline-block;"></span>${pend.length} pendentes
@@ -4486,7 +4479,7 @@ function rendResumoOrc(){
     const onclick=temOS?`onclick="abrirDetalheDiaResumo('${dStr}',${JSON.stringify(grupo.ap.map(o=>o.id))},${JSON.stringify(grupo.pend.map(o=>o.id))},${JSON.stringify(grupo.canc.map(o=>o.id))})"`:'' ;
     html+=`<div class="${cls}" ${onclick} style="${temOS?'cursor:pointer;':'cursor:default;'}">
       <div class="resumo-cal-day-num">${dia}</div>
-      ${grupo.ap.length>0?`<span class="resumo-badge-ap">${grupo.ap.length} aprov.</span>`:''}
+      ${grupo.ap.length>0?`<span class="resumo-badge-ap">${grupo.ap.length} agend.</span>`:''}
       ${grupo.pend.length>0?`<span class="resumo-badge-pend">${grupo.pend.length} pend.</span>`:''}
       ${grupo.canc.length>0?`<span class="resumo-badge-canc">${grupo.canc.length} canc.</span>`:''}
     </div>`;
@@ -4504,7 +4497,7 @@ function abrirDetalheDiaResumo(dStr, idsAp, idsPend, idsCanc){
 
   const renderItem=(o,cls)=>{
     const st=o.status==='recusado'?'cancelado':(o.status||'pendente');
-    const stLabel=st==='aprovado'?'✅ Aprovado':st==='cancelado'?'🔴 Cancelado':'🟡 Pendente';
+    const stLabel=st==='aprovado'?'✅ Agendado':st==='cancelado'?'🔴 Cancelado':'🟡 Pendente';
     return `<div class="resumo-dia-item ${cls}" onclick="fecharModal('modal-resumo-dia');setTimeout(()=>abrirCompartilhar(${o.id}),200);">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <div style="font-size:13px;font-weight:700;color:#fff;">${o.cliNome||'—'}</div>
@@ -4519,7 +4512,7 @@ function abrirDetalheDiaResumo(dStr, idsAp, idsPend, idsCanc){
   const pend = idsPend.map(id=>todas.find(o=>String(o.id)===String(id))).filter(Boolean);
   const canc = idsCanc.map(id=>todas.find(o=>String(o.id)===String(id))).filter(Boolean);
 
-  if(ap.length)   html+=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">✅ Aprovados (${ap.length})</div>`+ap.map(o=>renderItem(o,'ap')).join('');
+  if(ap.length)   html+=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">✅ Agendados (${ap.length})</div>`+ap.map(o=>renderItem(o,'ap')).join('');
   if(pend.length) html+=`<div style="font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:1px;margin:${ap.length?'12px':0} 0 6px;">🟡 Pendentes (${pend.length})</div>`+pend.map(o=>renderItem(o,'pend')).join('');
   if(canc.length) html+=`<div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:1px;margin:${(ap.length||pend.length)?'12px':0} 0 6px;">🔴 Cancelados (${canc.length})</div>`+canc.map(o=>renderItem(o,'canc')).join('');
 
@@ -4552,8 +4545,6 @@ function mudarTab(t){
     const el=document.getElementById('tab-'+x);
     if(el)el.classList.toggle('active',x===t);
   });
-  const elHist=document.getElementById('tab-historico');
-  if(elHist){elHist.classList.remove('active');}
   _tabAtual = t;
   // Lazy render: só renderiza se a aba está marcada como dirty
   if(t==='home'){if(_abasDirty.home){rendHome();_abasDirty.home=false;}}
