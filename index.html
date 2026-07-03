@@ -1088,27 +1088,6 @@ select option{background:#0a1e38;}
           <div class="field"><label>Data do Serviço</label><input type="date" id="share-data-ag"></div>
           <div class="field"><label>Horário</label><input type="time" id="share-hora-ag" value="08:00"></div>
         </div>
-        <div class="field" style="margin-top:10px;">
-          <label>Forma de Pagamento</label>
-          <select id="share-pgto" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);">
-            <option value="">Não informado</option>
-            <option value="PIX">💳 PIX</option>
-            <option value="Dinheiro">💵 Dinheiro</option>
-            <option value="Cartão Débito">💳 Cartão Débito</option>
-            <option value="Cartão Crédito">💳 Cartão Crédito</option>
-            <option value="Cartão 2x">💳 Cartão 2x</option>
-            <option value="Cartão 3x">💳 Cartão 3x</option>
-            <option value="Cartão 4x">💳 Cartão 4x</option>
-            <option value="Cartão 5x">💳 Cartão 5x</option>
-            <option value="Cartão 6x">💳 Cartão 6x</option>
-            <option value="Cartão 7x">💳 Cartão 7x</option>
-            <option value="Cartão 8x">💳 Cartão 8x</option>
-            <option value="Cartão 9x">💳 Cartão 9x</option>
-            <option value="Cartão 10x">💳 Cartão 10x</option>
-            <option value="Cartão 11x">💳 Cartão 11x</option>
-            <option value="Cartão 12x">💳 Cartão 12x</option>
-          </select>
-        </div>
         <!-- CAMPO DIA 2 — serviços de 2 dias -->
         <div class="field" id="share-data2-wrap" style="margin-top:12px;">
           <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;">
@@ -1205,10 +1184,21 @@ select option{background:#0a1e38;}
     <div class="modal-title">✅ Aprovar Serviço</div>
     <div class="field"><label>Data do Serviço *</label><input type="date" id="modal-aprovar-data"></div>
     <div class="field"><label>Horário *</label><input type="time" id="modal-aprovar-hora" value="08:00"></div>
+    <div class="brow">
+      <button class="btn btn-o" onclick="fecharModal('modal-aprovar-os')" style="flex:1;">Cancelar</button>
+      <button class="btn btn-g" id="modal-aprovar-ok" style="flex:1;">✅ Aprovar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EXECUTAR OS (forma de pagamento no momento da execução) -->
+<div class="modal-overlay" id="modal-executar-os">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">✅ Marcar como Executado</div>
     <div class="field">
-      <label>Forma de Pagamento</label>
-      <select id="modal-aprovar-pgto" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);">
-        <option value="">Não informado</option>
+      <label>Forma de Pagamento *</label>
+      <select id="modal-executar-pgto" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);">
+        <option value="">Selecione...</option>
         <option value="PIX">💳 PIX</option>
         <option value="Dinheiro">💵 Dinheiro</option>
         <option value="Cartão Débito">💳 Cartão Débito</option>
@@ -1227,8 +1217,8 @@ select option{background:#0a1e38;}
       </select>
     </div>
     <div class="brow">
-      <button class="btn btn-o" onclick="fecharModal('modal-aprovar-os')" style="flex:1;">Cancelar</button>
-      <button class="btn btn-g" id="modal-aprovar-ok" style="flex:1;">✅ Aprovar</button>
+      <button class="btn btn-o" onclick="fecharModal('modal-executar-os')" style="flex:1;">Cancelar</button>
+      <button class="btn btn-g" id="modal-executar-ok" style="flex:1;">✅ Confirmar</button>
     </div>
   </div>
 </div>
@@ -2612,8 +2602,6 @@ function updStatusShare(){
       os.dataAprovacao=new Date().toISOString();
       os.dataServico=dataAg;
       os.horaServico=horaAg;
-      const pgtoShareEl=document.getElementById('share-pgto');
-      if(pgtoShareEl&&pgtoShareEl.value)os.formaPgto=pgtoShareEl.value;
       delete os.motivoRecusa;
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
       const data2ShareEl=document.getElementById('share-data2-ag');
@@ -4673,16 +4661,25 @@ function marcarExecutado(agId){
   if(!ag){toast('⚠️ Agendamento não encontrado',true);return;}
   const os=ordens.find(o=>o.id===ag.osId||String(o.id)===String(ag.osId));
   if(!os){toast('⚠️ OS não encontrada',true);return;}
-  confirmar('✅ Marcar como Executado','Tem certeza que deseja marcar este serviço como executado?','✅ Confirmar','btn-g',()=>{
+  // Forma de pagamento é definida agora, no momento da execução — não no agendamento.
+  const pgtoEl=document.getElementById('modal-executar-pgto');
+  if(pgtoEl)pgtoEl.value=os.formaPgto||'';
+  document.getElementById('modal-executar-ok').onclick=()=>{
+    const pgto=document.getElementById('modal-executar-pgto').value;
+    if(!pgto){toast('⚠️ Selecione a forma de pagamento.',true);return;}
+    os.formaPgto=pgto;
+    ag.formaPgto=pgto;
     os.executado=true;
     os.dataExecucao=new Date().toISOString();
     os.updatedAt=Date.now();
     const taxaLancada=lancarTaxaMaquininha(os);
-    salvarLocal({ordens:true,despesas:taxaLancada});
+    salvarLocal({ordens:true,agenda:true,despesas:taxaLancada});
+    fecharModal('modal-executar-os');
     fecharModal('modal-ag-dia');
     rendAgenda();
     toast('✅ Serviço marcado como executado!');
-  });
+  };
+  abrirModal('modal-executar-os');
 }
 // Lança automaticamente a taxa da maquininha como despesa quando a OS é executada com pagamento em cartão
 function lancarTaxaMaquininha(os){
@@ -4937,12 +4934,11 @@ function updStatus(id,s){
   if(s===antigo)return;
 
   if(s==='aprovado'){
-    // Sempre abre o modal de aprovação — garante que data/hora e forma de pagamento
-    // sejam sempre confirmados/atualizados, mesmo em reaprovação de OS já agendada antes.
+    // Sempre abre o modal de aprovação — garante que data/hora sejam sempre
+    // confirmados/atualizados, mesmo em reaprovação de OS já agendada antes.
+    // Forma de pagamento não é pedida aqui — só no momento de marcar como Executado.
     document.getElementById('modal-aprovar-data').value=os.dataServico||os.dataOrc||hoje();
     document.getElementById('modal-aprovar-hora').value=os.horaServico||'08:00';
-    const pgtoPrefillEl=document.getElementById('modal-aprovar-pgto');
-    if(pgtoPrefillEl)pgtoPrefillEl.value=os.formaPgto||'';
     document.getElementById('modal-aprovar-ok').onclick=()=>{
       const dataAg=document.getElementById('modal-aprovar-data').value;
       const horaAg=document.getElementById('modal-aprovar-hora').value;
@@ -4955,8 +4951,6 @@ function updStatus(id,s){
       os.dataAprovacao=new Date().toISOString();
       os.dataServico=dataAg;
       os.horaServico=horaAg;
-      const pgtoEl=document.getElementById('modal-aprovar-pgto');
-      if(pgtoEl&&pgtoEl.value)os.formaPgto=pgtoEl.value;
       agendamentos=agendamentos.filter(a=>a.osId!==os.id);
       criarAgendamento(os,dataAg,horaAg);
       salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
