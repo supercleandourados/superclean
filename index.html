@@ -4937,28 +4937,12 @@ function updStatus(id,s){
   if(s===antigo)return;
 
   if(s==='aprovado'){
-    // Se já tem data/hora salva, confirmar e aprovar
-    if(os.dataServico&&os.horaServico){
-      confirmar('🟢 Confirmar Agendamento','Tem certeza que deseja agendar esta OS? Ela entrará na Agenda.','🟢 Agendar','btn-g',()=>{
-        os.status='aprovado';
-        os.executado=false;
-        os.updatedAt=Date.now();
-        os.mes=getMesKey();
-        os.dataFechamento=new Date().toISOString();
-        os.dataAprovacao=new Date().toISOString();
-        agendamentos=agendamentos.filter(a=>a.osId!==os.id);
-        criarAgendamento(os,os.dataServico,os.horaServico);
-        salvarLocal({ordens:true,agenda:true});updStats();calcReativacao(false);rendHist();rendProxServicos();rendFaturamento();
-        toast('🟢 Agendado! Serviço confirmado na Agenda.');
-      });
-      // Resetar select visual enquanto aguarda confirmação
-      const sel=document.querySelector(`select[onchange="updStatus(${id},this.value)"]`);
-      if(sel)sel.value=antigo;
-      return;
-    }
-    // Abrir modal para informar data/hora
-    document.getElementById('modal-aprovar-data').value=os.dataOrc||hoje();
-    document.getElementById('modal-aprovar-hora').value='08:00';
+    // Sempre abre o modal de aprovação — garante que data/hora e forma de pagamento
+    // sejam sempre confirmados/atualizados, mesmo em reaprovação de OS já agendada antes.
+    document.getElementById('modal-aprovar-data').value=os.dataServico||os.dataOrc||hoje();
+    document.getElementById('modal-aprovar-hora').value=os.horaServico||'08:00';
+    const pgtoPrefillEl=document.getElementById('modal-aprovar-pgto');
+    if(pgtoPrefillEl)pgtoPrefillEl.value=os.formaPgto||'';
     document.getElementById('modal-aprovar-ok').onclick=()=>{
       const dataAg=document.getElementById('modal-aprovar-data').value;
       const horaAg=document.getElementById('modal-aprovar-hora').value;
