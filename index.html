@@ -581,7 +581,8 @@ select option{background:#0a1e38;}
         </div>
         <div class="tl dest"><span>Total</span><span id="t-total">R$ 0,00</span></div>
       </div>
-      <button class="btn btn-p" onclick="salvarOS()">💾 Salvar Orçamento</button>
+      <button class="btn btn-p" id="btn-salvar-os" onclick="salvarOS()">💾 Salvar Orçamento</button>
+      <button class="btn btn-o" id="btn-cancelar-edicao" onclick="cancelarEdicaoOS()" style="width:100%;margin-top:8px;display:none;">✕ Cancelar Edição</button>
     </div>
 
     <!-- PRÓXIMOS AGENDAMENTOS NO PAINEL OS -->
@@ -1596,6 +1597,7 @@ let precos     = {};
 let mesAtual   = getMesKey(); // Readonly na prática: sempre sincronizado com getMesKey()
 let osCounter  = 0;
 let cliSelecionado = null;
+let _editandoOSId = null; // != null quando o formulário Nova OS está editando uma OS existente
 let osCompartilhar = null;
 let agendaAno  = new Date().getFullYear();
 let agendaMes  = new Date().getMonth(); // 0-indexed
@@ -2517,13 +2519,30 @@ function salvarOS(){
   const descTipo=document.getElementById('t-desc-tipo')?.value||'R$';
   const desconto=descTipo==='%'?(sub*descVal/100):descVal;
   const total=Math.max(0,sub-desconto);
+  const localServico=document.getElementById('local-servico')?.value.trim()||'';
+  const obs=document.getElementById('obs').value.trim();
+
+  if(_editandoOSId){
+    const os=ordens.find(o=>o.id===_editandoOSId);
+    if(!os){toast('⚠️ OS não encontrada',true);_editandoOSId=null;return;}
+    os.itens=itens;os.subtotal=sub;os.desconto=desconto;os.total=total;os.dataOrc=dataOrc;
+    os.localServico=localServico;os.obs=obs;os.updatedAt=Date.now();
+    // Se a OS já estava agendada, o agendamento reflete o novo valor/serviços
+    const ag=agendamentos.find(a=>a.osId===os.id);
+    if(ag){ag.valor=os.total;ag.servico=os.itens.map(i=>i.tipo+' ('+i.srvNome+')').join(', ');ag.updatedAt=Date.now();}
+    salvarLocal({ordens:true,agenda:!!ag});
+    toast('✅ OS #'+String(os.numero).padStart(4,'0')+' atualizada!');
+    cancelarEdicaoOS();
+    mudarTab('hist');
+    return;
+  }
+
   osCounter++;
   const os={
     id:Date.now(),numero:osCounter,
     cliId:cliSelecionado.id,cliNome:cliSelecionado.nome,cliWpp:cliSelecionado.wpp,cliEnd:cliSelecionado.end||'',
     itens,subtotal:sub,desconto,total,dataOrc,
-    localServico:document.getElementById('local-servico')?.value.trim()||'',
-    obs:document.getElementById('obs').value.trim(),
+    localServico,obs,
     status:'pendente',
     executado:false,
     dataCriacao:new Date().toISOString(),mes:getMesKey(), // mês real automático
@@ -2541,6 +2560,68 @@ function salvarOS(){
   if(tdEl)tdEl.value='0';
   document.getElementById('os-num-badge').textContent='OS #'+String(osCounter+1).padStart(4,'0');
   updStats();rendProxServicos();
+}
+function editarOS(osId){
+  const os=ordens.find(o=>o.id===osId||String(o.id)===String(osId));
+  if(!os){toast('⚠️ OS não encontrada',true);return;}
+  if(os.executado){toast('⚠️ Não é possível editar uma OS já executada.',true);return;}
+  fecharModal('modal-ag-dia');
+  _editandoOSId=os.id;
+  mudarTab('nova-os');
+  cliSelecionado={id:os.cliId,nome:os.cliNome,wpp:os.cliWpp,end:os.cliEnd||''};
+  document.getElementById('cli-input').style.display='none';
+  document.getElementById('cli-input').value='';
+  document.getElementById('ac-list').style.display='none';
+  document.getElementById('cli-selecionado').style.display='block';
+  document.getElementById('cli-sel-nome').textContent=cliSelecionado.nome;
+  document.getElementById('cli-sel-info').textContent=(cliSelecionado.wpp||'')+(cliSelecionado.end?' · '+cliSelecionado.end:'');
+  document.getElementById('data-orc').value=os.dataOrc||hoje();
+  const localEl=document.getElementById('local-servico');
+  if(localEl)localEl.value=os.localServico||'';
+  document.getElementById('obs').value=os.obs||'';
+  document.getElementById('items-list').innerHTML='';
+  ic=0;
+  (os.itens&&os.itens.length?os.itens:[]).forEach(item=>{
+    addItem();
+    const lid='i'+ic;
+    const tipEl=document.getElementById('tip_'+lid);
+    const srvEl=document.getElementById('srv_'+lid);
+    const qtdEl=document.getElementById('qtd_'+lid);
+    const vlEl=document.getElementById('vl_'+lid);
+    if(tipEl)tipEl.value=item.tipo;
+    if(srvEl)srvEl.value=item.srv;
+    if(qtdEl)qtdEl.value=item.qtd||1;
+    if(vlEl)vlEl.value=(item.vl||0).toFixed(2).replace('.',',');
+    calcItem(lid);
+  });
+  if(!os.itens||!os.itens.length)addItem();
+  const descValEl=document.getElementById('t-desc-val');
+  const descTipoEl=document.getElementById('t-desc-tipo');
+  if(descTipoEl)descTipoEl.value='R$';
+  if(descValEl)descValEl.value=(os.desconto||0).toFixed(2).replace('.',',');
+  calcTotais();
+  document.getElementById('os-num-badge').textContent='✏️ Editando OS #'+String(os.numero).padStart(4,'0');
+  const btnSalvar=document.getElementById('btn-salvar-os');
+  if(btnSalvar)btnSalvar.textContent='💾 Salvar Alterações';
+  const btnCancelarEd=document.getElementById('btn-cancelar-edicao');
+  if(btnCancelarEd)btnCancelarEd.style.display='block';
+  toast('✏️ Editando OS #'+String(os.numero).padStart(4,'0'));
+}
+function cancelarEdicaoOS(){
+  _editandoOSId=null;
+  limparCliente();
+  document.getElementById('items-list').innerHTML='';
+  ic=0;addItem();
+  document.getElementById('obs').value='';
+  document.getElementById('totais-box').style.display='none';
+  document.getElementById('data-orc').value=hoje();
+  const tdEl=document.getElementById('t-desc-val');
+  if(tdEl)tdEl.value='0';
+  document.getElementById('os-num-badge').textContent='OS #'+String(osCounter+1).padStart(4,'0');
+  const btnSalvar=document.getElementById('btn-salvar-os');
+  if(btnSalvar)btnSalvar.textContent='💾 Salvar Orçamento';
+  const btnCancelarEd=document.getElementById('btn-cancelar-edicao');
+  if(btnCancelarEd)btnCancelarEd.style.display='none';
 }
 function abrirCompartilhar(osId){
   const todas=getTodasOS();
@@ -2925,6 +3006,7 @@ function renderOS(o,comActions,isHistorico){
         <option value="cancelado"${o.status==='cancelado'?' selected':''}>🔴 Cancelado</option>
       </select>
       <button class="btn btn-wpp" style="padding:8px 14px;font-size:13px;white-space:nowrap;" onclick="abrirCompartilhar(${o.id})">📤 Compartilhar</button>
+      ${!o.executado?`<button class="btn btn-o" style="padding:8px 14px;font-size:13px;" onclick="editarOS(${o.id})" title="Editar itens do orçamento">✏️</button>`:''}
       <button class="btn btn-o" style="padding:8px 14px;font-size:13px;" onclick="duplicarOS(${o.id})" title="Duplicar">📋</button>
       <button class="btn btn-d" style="padding:8px 14px;font-size:13px;" onclick="delOS(${o.id})">🗑️</button>
     </div>`;
@@ -3292,6 +3374,7 @@ function buildAgCard(ag,noModal){
     : `
       <button class="btn btn-wpp" style="padding:6px 12px;font-size:12px;" onclick="window.open('https://wa.me/55${(ag.cliWpp||'').replace(/\D/g,'')}','_blank')">📱 WhatsApp</button>
       ${!osCancelada&&!executado?`<button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="remarcarAg('${ag.id}')">📅 Remarcar</button>`:''}
+      ${!osCancelada&&!executado?`<button class="btn btn-o" style="padding:6px 12px;font-size:12px;" onclick="editarOS('${ag.osId}')">✏️ Editar</button>`:''}
       ${!osCancelada&&!executado&&(ag.cliWpp||'').replace(/\D/g,'').length>=10
         ?`<button class="btn-lembrete-wpp" onclick="lembreteWpp('${ag.id}')">📲 Lembrete</button>`:''}
       ${!osCancelada&&!executado
