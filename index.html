@@ -757,12 +757,17 @@ select option{background:#0a1e38;}
     </div>
 
     <!-- Ranking Serviços -->
+    <div class="filtro-status" style="margin-bottom:12px;" id="rank-srv-filtros">
+      <button class="filtro-btn" onclick="setRankSrvPeriodo('semana',this)">Semana</button>
+      <button class="filtro-btn ativo" onclick="setRankSrvPeriodo('mes',this)">Mês</button>
+      <button class="filtro-btn" onclick="setRankSrvPeriodo('ano',this)">Ano</button>
+    </div>
     <div class="card" style="margin-bottom:16px;">
-      <div class="ctitle">🏆 Top Serviços do Mês</div>
+      <div class="ctitle" id="rank-srv-titulo">🏆 Top Serviços do Mês</div>
       <div id="fat-ranking-srv"></div>
     </div>
     <div class="card" style="margin-bottom:16px;">
-      <div class="ctitle">🛋️ Top Estofados do Mês</div>
+      <div class="ctitle" id="rank-tipo-titulo">🛋️ Top Estofados do Mês</div>
       <div id="fat-ranking-tipo"></div>
     </div>
 
@@ -4335,11 +4340,43 @@ function rendMeta(){
   document.getElementById('meta-atual-label').textContent=fmtMoeda(fat);
   document.getElementById('meta-total-label').textContent='Meta: '+fmtMoeda(meta);
 }
+let _rankSrvPeriodo='mes'; // 'semana' | 'mes' | 'ano'
+function setRankSrvPeriodo(p,btn){
+  _rankSrvPeriodo=p;
+  document.querySelectorAll('#rank-srv-filtros .filtro-btn').forEach(b=>b.classList.remove('ativo'));
+  if(btn)btn.classList.add('ativo');
+  rendRankings();
+}
+function _getFechadasPeriodo(p){
+  if(p==='semana'){
+    const hoje=new Date();
+    const seteDiasAtras=new Date(hoje.getTime()-6*24*60*60*1000);
+    seteDiasAtras.setHours(0,0,0,0);
+    return getFechadasTodas().filter(o=>{
+      const dt=new Date(o.dataExecucao||o.dataFechamento||o.dataCriacao);
+      return dt>=seteDiasAtras;
+    });
+  }
+  if(p==='ano'){
+    const ano=new Date().getFullYear();
+    return getFechadasTodas().filter(o=>{
+      const dt=new Date(o.dataExecucao||o.dataFechamento||o.dataCriacao);
+      return dt.getFullYear()===ano;
+    });
+  }
+  return getFechadasMes(); // 'mes' (padrão)
+}
 function rendRankings(){
-  const mes=getFechadasMes();
+  const periodoLabel={semana:'da Semana',mes:'do Mês',ano:'do Ano'}[_rankSrvPeriodo]||'do Mês';
+  const tituloSrv=document.getElementById('rank-srv-titulo');
+  const tituloTipo=document.getElementById('rank-tipo-titulo');
+  if(tituloSrv)tituloSrv.textContent='🏆 Top Serviços '+periodoLabel;
+  if(tituloTipo)tituloTipo.textContent='🛋️ Top Estofados '+periodoLabel;
+  const base=_getFechadasPeriodo(_rankSrvPeriodo);
+  const vazioMsg='Sem dados nesse período';
   // Ranking serviços
   const cntSrv={};
-  mes.forEach(o=>o.itens?.forEach(i=>{
+  base.forEach(o=>o.itens?.forEach(i=>{
     const k=i.srvNome||'Higienização';
     cntSrv[k]=(cntSrv[k]||0)+i.qtd;
   }));
@@ -4350,10 +4387,10 @@ function rendRankings(){
       <div class="rank-pos">${i+1}</div>
       <div class="rank-nome">${n}</div>
       <div class="rank-val">${q}x</div>
-    </div>`).join(''):'<div class="empty">Sem dados este mês</div>';
+    </div>`).join(''):`<div class="empty">${vazioMsg}</div>`;
   // Ranking tipos
   const cntTipo={};
-  mes.forEach(o=>o.itens?.forEach(i=>{
+  base.forEach(o=>o.itens?.forEach(i=>{
     const k=i.tipo||'Outro';
     cntTipo[k]=(cntTipo[k]||0)+i.qtd;
   }));
@@ -4364,13 +4401,18 @@ function rendRankings(){
       <div class="rank-pos">${i+1}</div>
       <div class="rank-nome">${n}</div>
       <div class="rank-val">${q}x</div>
-    </div>`).join(''):'<div class="empty">Sem dados este mês</div>';
+    </div>`).join(''):`<div class="empty">${vazioMsg}</div>`;
 }
 function rendCliTipo(){
   const mes=getFechadasMes();
   const cliIds=mes.map(o=>o.cliId);
-  // Clientes que aparecem no histórico anterior
-  const histClis=new Set(getFechadasTodas().map(o=>o.cliId));
+  // Clientes que aparecem no histórico ANTES deste mês (getFechadasTodas() inclui o mês
+  // atual, então sem esse filtro todo cliente do próprio mês contava como "retorno")
+  const mesAtualKey=getMesKey();
+  const histClis=new Set(getFechadasTodas().filter(o=>{
+    const df=o.dataExecucao||o.dataFechamento||o.dataCriacao;
+    return df&&df.slice(0,7)!==mesAtualKey;
+  }).map(o=>o.cliId));
   let novos=0,retorno=0;
   const vistos=new Set();
   cliIds.forEach(id=>{
