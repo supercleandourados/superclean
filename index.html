@@ -694,11 +694,6 @@ select option{background:#0a1e38;}
         <div class="fat-kpi-sub" id="fat-mes-qtd">0 vendas</div>
       </div>
       <div class="fat-kpi-card">
-        <div class="fat-kpi-label">Faturamento anual</div>
-        <div class="fat-kpi-val" id="fat-anual">R$ 0,00</div>
-        <div class="fat-kpi-sub" id="fat-anual-qtd">0 vendas no ano</div>
-      </div>
-      <div class="fat-kpi-card">
         <div class="fat-kpi-label">Ticket médio</div>
         <div class="fat-kpi-val" id="fat-ticket">R$ 0,00</div>
         <div class="fat-kpi-sub">Por venda fechada</div>
@@ -722,6 +717,16 @@ select option{background:#0a1e38;}
         <div class="fat-kpi-label">Lucro do mês</div>
         <div class="fat-kpi-val" id="fat-lucro-mes">R$ 0,00</div>
         <div class="fat-kpi-sub">Faturamento − despesas</div>
+      </div>
+    </div>
+
+    <!-- Faturamento anual — oculto por padrão, só mostra sob demanda -->
+    <button class="btn btn-o" onclick="toggleFaturamentoAnual()" id="btn-toggle-anual" style="width:100%;margin-bottom:16px;font-size:13px;">📅 Ver faturamento anual</button>
+    <div class="fat-kpi" id="fat-anual-wrap" style="display:none;margin-bottom:16px;">
+      <div class="fat-kpi-card" style="grid-column:1/-1;">
+        <div class="fat-kpi-label">Faturamento anual</div>
+        <div class="fat-kpi-val" id="fat-anual">R$ 0,00</div>
+        <div class="fat-kpi-sub" id="fat-anual-qtd">0 vendas no ano</div>
       </div>
     </div>
 
@@ -3487,6 +3492,13 @@ function rendDespesas(fatMes){
         <button onclick="rmDespesa(${d.id})" title="Excluir" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;">✕</button>
       </div>
     </div>`).join('');
+}
+function toggleFaturamentoAnual(){
+  const wrap=document.getElementById('fat-anual-wrap');
+  const btn=document.getElementById('btn-toggle-anual');
+  const aberto=wrap.style.display!=='none';
+  wrap.style.display=aberto?'none':'grid';
+  btn.textContent=aberto?'📅 Ver faturamento anual':'📅 Ocultar faturamento anual';
 }
 function rendFaturamento(){
   const mesOrd=getFechadasMes();
