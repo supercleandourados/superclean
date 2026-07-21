@@ -1300,6 +1300,9 @@ select option{background:#0a1e38;}
 </div>
 
 <div class="toast" id="toast"><span id="tmsg"></span></div>
+<div id="banner-nova-versao" onclick="location.reload()" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--blue);color:#fff;padding:13px 16px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;z-index:99999;box-shadow:0 -2px 12px rgba(0,0,0,.3);">
+  🔄 Nova versão disponível — toque aqui para atualizar
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -1851,6 +1854,7 @@ function init(){
     setTimeout(()=>verificarBackupAutomatico(), 2000);
     setTimeout(()=>verificarMesNovo(), 3000);
     setTimeout(()=>arquivarOSAntigas(), 5000); // arquivamento silencioso
+    setTimeout(()=>iniciarChecagemNovaVersao(), 4000);
   }
   document.addEventListener('click',e=>{
     if(!document.getElementById('ac-wrap').contains(e.target))
@@ -5428,6 +5432,30 @@ function processarImport(input) {
 // ============ ARQUIVAMENTO AUTOMÁTICO DE OS ANTIGAS ============
 // OS com status resolvido e mais de 90 dias migram de ordens[] para historico[]
 // Mantém ordens[] leve e buscas rápidas — roda silenciosamente no startup
+// ---- CHECAGEM DE NOVA VERSÃO ----
+// Compara o Last-Modified/ETag do próprio arquivo publicado com o que foi carregado
+// nesta aba. Se o site foi atualizado depois que essa aba abriu, avisa pra recarregar
+// — evita que um aparelho fique preso numa versão antiga sem o usuário perceber.
+let _scVersaoConhecida=null;
+let _scAvisoJaMostrado=false;
+function _checkNovaVersao(){
+  if(_scAvisoJaMostrado)return;
+  return fetch(location.href,{method:'HEAD',cache:'no-store'}).then(r=>{
+    const marca=r.headers.get('last-modified')||r.headers.get('etag');
+    if(!marca)return;
+    if(_scVersaoConhecida===null){_scVersaoConhecida=marca;return;}
+    if(marca!==_scVersaoConhecida){
+      _scAvisoJaMostrado=true;
+      const el=document.getElementById('banner-nova-versao');
+      if(el)el.style.display='block';
+    }
+  }).catch(()=>{});
+}
+function iniciarChecagemNovaVersao(){
+  _checkNovaVersao();
+  setInterval(_checkNovaVersao, 3*60*1000); // a cada 3 min
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden)_checkNovaVersao(); });
+}
 function arquivarOSAntigas(){
   const DIAS_LIMITE = 90;
   const corte = Date.now() - DIAS_LIMITE * 24 * 60 * 60 * 1000;
