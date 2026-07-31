@@ -3119,6 +3119,10 @@ function getAgsMes(ano,mes){
   const agVirtuais=[];
   getTodasOS().filter(o=>historico.length&&!osIds.has(o.id)&&!o.ocultarFantasma).forEach(o=>{
     if(!o.id)return; // já tem agendamento real
+    // CRÍTICO: só considerar OS aprovadas (agendadas) — sem isso, uma OS pendente
+    // recém-criada (sem dataServico/dataFechamento ainda) cai no fallback de
+    // dataCriacao e aparece no calendário de hoje sem nunca ter sido agendada.
+    if(o.status!=='aprovado')return;
     // Usar dataServico ou dataFechamento para posicionar no calendário
     const dataPos=o.dataServico||(o.dataFechamento?o.dataFechamento.slice(0,10):null)||(o.dataCriacao?o.dataCriacao.slice(0,10):null);
     if(!dataPos||!dataPos.startsWith(key))return;
@@ -3303,6 +3307,10 @@ function abrirDiaAgenda(dStr,dNum){
   const agsVirtuais=[];
   getTodasOS().forEach(o=>{
     if(osIdsReais.has(o.id)||o.ocultarFantasma)return;
+    // CRÍTICO: só considerar OS aprovadas (agendadas) — sem isso, uma OS pendente
+    // recém-criada (sem dataServico/dataFechamento ainda) cai no fallback de
+    // dataCriacao e aparece "fantasma" na agenda de hoje sem nunca ter sido agendada.
+    if(o.status!=='aprovado')return;
     const dataPos=o.dataServico||(o.dataFechamento?o.dataFechamento.slice(0,10):null)||(o.dataCriacao?o.dataCriacao.slice(0,10):null);
     if(dataPos!==dStr)return;
     agsVirtuais.push({
