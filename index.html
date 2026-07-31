@@ -609,7 +609,7 @@ select option{background:#0a1e38;}
     </div>
 
     <!-- Busca na agenda/histórico -->
-    <input type="text" id="agenda-busca" placeholder="🔍 Buscar por cliente ou nº OS neste mês..." oninput="rendAgenda()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
+    <input type="text" id="agenda-busca" placeholder="🔍 Buscar por cliente ou nº OS neste mês..." oninput="debounceRendAgenda()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
 
     <!-- Indicadores compactos -->
     <div class="agenda-indicadores">
@@ -904,7 +904,7 @@ select option{background:#0a1e38;}
         <div style="font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700;color:#fff;" id="hist-title">Orçamentos em Aberto</div>
         <div style="font-size:13px;color:var(--muted);margin-top:2px;" id="hist-sub">—</div>
       </div>
-      <input type="text" id="orc-busca" placeholder="🔍 Buscar por cliente ou nº OS..." oninput="rendHist()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
+      <input type="text" id="orc-busca" placeholder="🔍 Buscar por cliente ou nº OS..." oninput="debounceRendHist()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
       <div id="lista-hist"></div>
     </div>
     <!-- Resumo do mês -->
@@ -4090,6 +4090,8 @@ function debounce(fn, delay){
 }
 const debounceBusca = debounce(buscaCliente, 250);
 const debounceRendCli = debounce(rendClientes, 300);
+const debounceRendAgenda = debounce(rendAgenda, 300);
+const debounceRendHist = debounce(rendHist, 300);
 
 function calcPascoa(ano){
   const a=ano%19,b=Math.floor(ano/100),c=ano%100;
