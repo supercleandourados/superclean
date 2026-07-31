@@ -544,7 +544,10 @@ select option{background:#0a1e38;}
         <div style="background:rgba(76,175,34,.1);border:1px solid rgba(76,175,34,.3);border-radius:8px;padding:10px 14px;font-size:13px;">
           <div style="font-weight:600;color:#fff;" id="cli-sel-nome"></div>
           <div style="color:var(--muted);margin-top:2px;" id="cli-sel-info"></div>
-          <button onclick="limparCliente()" style="background:none;border:none;color:#ff6b6b;font-size:11px;cursor:pointer;margin-top:4px;">✕ Trocar cliente</button>
+          <div style="display:flex;gap:12px;align-items:center;margin-top:6px;">
+            <button onclick="limparCliente()" style="background:none;border:none;color:#ff6b6b;font-size:11px;cursor:pointer;">✕ Trocar cliente</button>
+            <button id="btn-repetir-pedido" onclick="repetirUltimoPedido()" style="display:none;background:none;border:none;color:var(--sky);font-size:11px;cursor:pointer;">🔁 Repetir último pedido</button>
+          </div>
         </div>
       </div>
 
@@ -2034,6 +2037,39 @@ function selecionarCliente(id){
   // Preencher local com endereço do cliente (editável)
   const localEl=document.getElementById('local-servico');
   if(localEl&&c.end&&!localEl.value)localEl.value=c.end;
+  // Mostrar atalho "Repetir último pedido" se o cliente já tiver algum pedido com itens
+  const btnRepetir=document.getElementById('btn-repetir-pedido');
+  if(btnRepetir){
+    const temPedidoAnterior=getTodasOS().some(o=>o.cliId===c.id&&o.itens&&o.itens.length);
+    btnRepetir.style.display=temPedidoAnterior?'inline-block':'none';
+  }
+}
+function _getUltimoPedidoCliente(cliId){
+  const pedidos=getTodasOS().filter(o=>o.cliId===cliId&&o.itens&&o.itens.length);
+  if(!pedidos.length)return null;
+  return pedidos.reduce((a,b)=>new Date(a.dataCriacao)>new Date(b.dataCriacao)?a:b);
+}
+function repetirUltimoPedido(){
+  if(!cliSelecionado)return;
+  const ultimo=_getUltimoPedidoCliente(cliSelecionado.id);
+  if(!ultimo){toast('⚠️ Nenhum pedido anterior encontrado',true);return;}
+  document.getElementById('items-list').innerHTML='';
+  ic=0;
+  ultimo.itens.forEach(item=>{
+    addItem();
+    const lid='i'+ic;
+    const tipEl=document.getElementById('tip_'+lid);
+    const srvEl=document.getElementById('srv_'+lid);
+    const qtdEl=document.getElementById('qtd_'+lid);
+    const vlEl=document.getElementById('vl_'+lid);
+    if(tipEl)tipEl.value=item.tipo;
+    if(srvEl)srvEl.value=item.srv;
+    if(qtdEl)qtdEl.value=item.qtd||1;
+    if(vlEl)vlEl.value=(item.vl||0).toFixed(2).replace('.',',');
+    calcItem(lid);
+  });
+  calcTotais();
+  toast('🔁 Itens do último pedido preenchidos — confira os valores antes de salvar');
 }
 function limparCliente(){
   cliSelecionado=null;
@@ -3906,6 +3942,23 @@ function buildResgateCard(o,agora){
     </div>
   </div>`;
 }
+// Quantos orçamentos pendentes estão a menos de 1 dia de virar Resgate (4-5 dias parados)
+function getQtdQuaseResgate(){
+  const agora=new Date();
+  const quatroDias=4*24*60*60*1000,cincoDias=5*24*60*60*1000;
+  return getTodasOS().filter(o=>{
+    if(o.status!=='pendente'||!o.dataCriacao)return false;
+    const idade=agora-new Date(o.dataCriacao);
+    return idade>=quatroDias&&idade<cincoDias;
+  }).length;
+}
+// Atualiza o número e a cor do card "OS pendentes" — fica vermelho se tiver algum quase entrando no Resgate
+function atualizarCardPendentes(qtd){
+  const el=document.getElementById('hc-pend');
+  if(!el)return;
+  el.textContent=qtd;
+  el.style.color=getQtdQuaseResgate()>0?'var(--red)':'var(--orange)';
+}
 function calcResgate(mostrarAlerta){
   const el=document.getElementById('lista-resgate');
   const agora=new Date();const cincoDias=5*24*60*60*1000;
@@ -4032,7 +4085,7 @@ function updStats(){
     const agHoje=agendamentos.filter(a=>(a.data===hj||a.data2===hj)&&osAprovMapa[a.osId]).length;
     const agAmanha=agendamentos.filter(a=>(a.data===amanhStr||a.data2===amanhStr)&&osAprovMapa[a.osId]).length;
     hcHoje.textContent=agHoje;
-    document.getElementById('hc-pend').textContent=ordens.filter(o=>o.status==='pendente').length;
+    atualizarCardPendentes(ordens.filter(o=>o.status==='pendente').length);
     document.getElementById('hc-cli').textContent=clientes.length;
     const fechadasMes=getFechadasMes();
     const fatMes=fechadasMes.reduce((a,o)=>a+parseFloat(o.total||0),0);
@@ -4258,7 +4311,7 @@ function rendHome(){
   const osPend=ordens.filter(o=>o.status==='pendente').length;
   const fatMes=getFechadasMes().reduce((a,o)=>a+parseFloat(o.total||0),0);
   document.getElementById('hc-hoje').textContent=agHoje;
-  document.getElementById('hc-pend').textContent=osPend;
+  atualizarCardPendentes(osPend);
   document.getElementById('hc-cli').textContent=clientes.length;
   document.getElementById('hc-fat').textContent=fmtMoeda(fatMes);
 
@@ -4797,6 +4850,12 @@ function cancelarAg(agId){
   });
 }
 
+// Retorna a forma de pagamento do pedido executado mais recente desse cliente (ou '' se nenhum)
+function _getUltimaFormaPgtoCliente(cliId){
+  const anteriores=getTodasOS().filter(o=>o.cliId===cliId&&o.executado&&o.formaPgto)
+    .sort((a,b)=>new Date(b.dataExecucao||0)-new Date(a.dataExecucao||0));
+  return anteriores.length?anteriores[0].formaPgto:'';
+}
 function marcarExecutado(agId){
   // Busca robusta — id pode ser string ou number
   const ag=agendamentos.find(a=>String(a.id)===String(agId));
@@ -4804,8 +4863,9 @@ function marcarExecutado(agId){
   const os=ordens.find(o=>o.id===ag.osId||String(o.id)===String(ag.osId));
   if(!os){toast('⚠️ OS não encontrada',true);return;}
   // Forma de pagamento é definida agora, no momento da execução — não no agendamento.
+  // Se ainda não tem uma definida nesta OS, sugere a última forma usada por este cliente.
   const pgtoEl=document.getElementById('modal-executar-pgto');
-  if(pgtoEl)pgtoEl.value=os.formaPgto||'';
+  if(pgtoEl)pgtoEl.value=os.formaPgto||_getUltimaFormaPgtoCliente(os.cliId)||'';
   document.getElementById('modal-executar-ok').onclick=()=>{
     const pgto=document.getElementById('modal-executar-pgto').value;
     if(!pgto){toast('⚠️ Selecione a forma de pagamento.',true);return;}
