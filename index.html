@@ -370,7 +370,7 @@ select option{background:#0a1e38;}
 <!-- TELA DE LOGIN — bloqueia o app até autenticar no Firebase -->
 <div id="login-overlay" style="display:flex;position:fixed;inset:0;background:linear-gradient(160deg,#04080f 0%,#07122a 50%,#0a1e38 100%);z-index:10000;flex-direction:column;align-items:center;justify-content:center;">
   <div style="text-align:center;max-width:320px;width:90%;padding:0 20px;">
-    <div style="font-size:48px;margin-bottom:12px;">🧹</div>
+    <img id="login-logo" src="" alt="Super Clean" style="width:72px;height:72px;border-radius:18px;margin-bottom:12px;object-fit:cover;">
     <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Super Clean</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:28px;">Entre para acessar o sistema</div>
     <div class="field" style="text-align:left;">
@@ -1607,6 +1607,13 @@ Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]
 </script>
 
 <script>
+// Reaproveita a mesma logo do cabeçalho (já embutida em base64) na tela de login,
+// sem precisar duplicar a imagem em outro lugar do arquivo.
+(function(){
+  const master=document.getElementById('logo-master');
+  const loginLogo=document.getElementById('login-logo');
+  if(master&&loginLogo&&master.src)loginLogo.src=master.src;
+})();
 const TIPOS_DEFAULT=[
   'Sofá Retrátil 2 lugares','Sofá Retrátil 3 lugares','Sofá Retrátil 4 lugares','Sofá Retrátil 5 lugares','Sofá Retrátil 6+ lugares',
   'Sofá Fixo 2 lugares','Sofá Fixo 3 lugares','Sofá Fixo 4 lugares','Sofá Fixo 5 lugares','Sofá Fixo 6+ lugares',
