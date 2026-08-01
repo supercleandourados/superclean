@@ -372,17 +372,22 @@ select option{background:#0a1e38;}
   <div style="text-align:center;max-width:320px;width:90%;padding:0 20px;">
     <img id="login-logo" src="" alt="Super Clean" style="width:72px;height:72px;border-radius:18px;margin-bottom:12px;object-fit:cover;">
     <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Super Clean</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:28px;">Entre para acessar o sistema</div>
-    <div class="field" style="text-align:left;">
-      <label>E-mail</label>
-      <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-senha').focus()">
+    <!-- Enquanto verifica se já tem login salvo no aparelho -->
+    <div id="login-verificando" style="font-size:13px;color:var(--muted);margin-top:14px;">Carregando...</div>
+    <!-- Só aparece se realmente precisar entrar -->
+    <div id="login-form" style="display:none;">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:28px;">Entre para acessar o sistema</div>
+      <div class="field" style="text-align:left;">
+        <label>E-mail</label>
+        <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-senha').focus()">
+      </div>
+      <div class="field" style="text-align:left;">
+        <label>Senha</label>
+        <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()">
+      </div>
+      <div id="login-erro" style="color:var(--red);font-size:13px;margin:4px 0 12px;min-height:18px;"></div>
+      <button class="btn btn-p" id="login-btn" onclick="fazerLogin()" style="width:100%;">Entrar</button>
     </div>
-    <div class="field" style="text-align:left;">
-      <label>Senha</label>
-      <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()">
-    </div>
-    <div id="login-erro" style="color:var(--red);font-size:13px;margin:4px 0 12px;min-height:18px;"></div>
-    <button class="btn btn-p" id="login-btn" onclick="fazerLogin()" style="width:100%;">Entrar</button>
   </div>
 </div>
 <!-- TELA DE BLOQUEIO PIN -->
@@ -1506,6 +1511,8 @@ let _syncFirebaseIniciado = false;
 onAuthStateChanged(auth, (user) => {
   const overlay = document.getElementById('login-overlay');
   const erroEl = document.getElementById('login-erro');
+  const verificandoEl = document.getElementById('login-verificando');
+  const formEl = document.getElementById('login-form');
   if (user) {
     if (overlay) overlay.style.display = 'none';
     if (erroEl) erroEl.textContent = '';
@@ -1516,6 +1523,10 @@ onAuthStateChanged(auth, (user) => {
       document.dispatchEvent(new Event('auth-ready'));
     }
   } else {
+    // Só mostra o formulário depois de confirmar que realmente não tem login salvo —
+    // evita o "piscar" do formulário antes de restaurar a sessão salva no aparelho.
+    if (verificandoEl) verificandoEl.style.display = 'none';
+    if (formEl) formEl.style.display = 'block';
     if (overlay) overlay.style.display = 'flex';
   }
 });
