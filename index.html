@@ -367,6 +367,24 @@ select option{background:#0a1e38;}
 </style>
 </head>
 <body>
+<!-- TELA DE LOGIN — bloqueia o app até autenticar no Firebase -->
+<div id="login-overlay" style="display:flex;position:fixed;inset:0;background:linear-gradient(160deg,#04080f 0%,#07122a 50%,#0a1e38 100%);z-index:10000;flex-direction:column;align-items:center;justify-content:center;">
+  <div style="text-align:center;max-width:320px;width:90%;padding:0 20px;">
+    <div style="font-size:48px;margin-bottom:12px;">🧹</div>
+    <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:4px;">Super Clean</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:28px;">Entre para acessar o sistema</div>
+    <div class="field" style="text-align:left;">
+      <label>E-mail</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-senha').focus()">
+    </div>
+    <div class="field" style="text-align:left;">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()">
+    </div>
+    <div id="login-erro" style="color:var(--red);font-size:13px;margin:4px 0 12px;min-height:18px;"></div>
+    <button class="btn btn-p" id="login-btn" onclick="fazerLogin()" style="width:100%;">Entrar</button>
+  </div>
+</div>
 <!-- TELA DE BLOQUEIO PIN -->
 <div id="pin-overlay" style="display:none;position:fixed;inset:0;background:linear-gradient(160deg,#04080f 0%,#07122a 50%,#0a1e38 100%);z-index:9999;flex-direction:column;align-items:center;justify-content:center;">
   <div style="text-align:center;max-width:320px;width:90%;padding:0 20px;">
@@ -1044,6 +1062,12 @@ select option{background:#0a1e38;}
       </div>
     </div>
 
+    <!-- CONTA -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="ctitle">👤 Conta</div>
+      <button class="btn btn-d" onclick="sairDoSistema()" style="width:100%;font-size:13px;">🚪 Sair do sistema</button>
+    </div>
+
     <div class="card">
       <div class="ctitle">⚙️ Tipos de Estofados</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Adicione, edite ou remova os tipos que aparecem nos orçamentos.</p>
@@ -1318,6 +1342,7 @@ select option{background:#0a1e38;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCc3kljkXlnp5aL-KcXaCUCRg4ubqB7Z2I",
@@ -1469,6 +1494,33 @@ window.fbCarregarClientes = async function() {
   } catch(e) { console.warn('CLI load error:', e); return null; }
 };
 
+// Autenticação — todo o sync com o Firestore só começa depois de um login válido
+const auth = getAuth(fbApp);
+window.fbFazerLogin = function(email, senha){
+  return signInWithEmailAndPassword(auth, email, senha);
+};
+window.fbFazerLogout = function(){
+  signOut(auth);
+};
+let _syncFirebaseIniciado = false;
+onAuthStateChanged(auth, (user) => {
+  const overlay = document.getElementById('login-overlay');
+  const erroEl = document.getElementById('login-erro');
+  if (user) {
+    if (overlay) overlay.style.display = 'none';
+    if (erroEl) erroEl.textContent = '';
+    if (!_syncFirebaseIniciado) {
+      _syncFirebaseIniciado = true;
+      _iniciarSyncFirebase();
+      window._authReady = true;
+      document.dispatchEvent(new Event('auth-ready'));
+    }
+  } else {
+    if (overlay) overlay.style.display = 'flex';
+  }
+});
+
+function _iniciarSyncFirebase(){
 // Escutar mudanças operacionais em tempo real
 onSnapshot(REF, (snap) => {
   if (_fbSaving || !snap.exists()) return;
@@ -1551,6 +1603,7 @@ Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]
   window._fbReady = true;
   document.dispatchEvent(new Event('fb-ready'));
 });
+} // fim de _iniciarSyncFirebase()
 </script>
 
 <script>
@@ -1726,6 +1779,28 @@ let _pinNovo = '';
 
 function pinAtivo(){ return !!localStorage.getItem(PIN_KEY); }
 
+function fazerLogin(){
+  const emailEl=document.getElementById('login-email');
+  const senhaEl=document.getElementById('login-senha');
+  const erroEl=document.getElementById('login-erro');
+  const btnEl=document.getElementById('login-btn');
+  const email=(emailEl?.value||'').trim();
+  const senha=senhaEl?.value||'';
+  if(!email||!senha){ if(erroEl)erroEl.textContent='Preencha e-mail e senha.'; return; }
+  if(erroEl)erroEl.textContent='';
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='Entrando...';}
+  window.fbFazerLogin(email,senha).catch(e=>{
+    const invalidas=['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'];
+    if(erroEl)erroEl.textContent=invalidas.includes(e.code)?'E-mail ou senha incorretos.':'Erro ao entrar. Verifique sua internet.';
+  }).finally(()=>{
+    if(btnEl){btnEl.disabled=false;btnEl.textContent='Entrar';}
+  });
+}
+function sairDoSistema(){
+  confirmar('🚪 Sair do sistema','Tem certeza que deseja sair? Você vai precisar entrar com e-mail e senha de novo.','🚪 Sair','btn-d',()=>{
+    if(window.fbFazerLogout)window.fbFazerLogout();
+  });
+}
 function verificarPINnecessario(){
   if(!pinAtivo()) return; // sem PIN configurado — passar direto
   const overlay = document.getElementById('pin-overlay');
@@ -5817,7 +5892,12 @@ function verificarLembretesAmanha() {
   }
 }
 
-init();
+// Só inicia o app depois de autenticado — window._authReady é setado pelo módulo Firebase
+if (window._authReady) {
+  init();
+} else {
+  document.addEventListener('auth-ready', init, { once: true });
+}
 </script>
   <!-- FAB Nova OS -->
   <button class="fab" onclick="mudarTab('nova-os')" title="Nova OS">🧾</button>
