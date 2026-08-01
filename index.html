@@ -941,7 +941,7 @@ select option{background:#0a1e38;}
   </div>
   <div id="tab-resgate" class="tbc">
     <div class="modal-title-h">🆘 Resgate de Orçamentos</div>
-    <div class="modal-sub-txt">Orçamentos parados há 5+ dias sem aprovação — recupere com uma mensagem</div>
+    <div class="modal-sub-txt">Orçamentos parados há 5+ dias sem confirmação — recupere com uma mensagem</div>
     <div id="lista-resgate"></div>
   </div>
   <div id="tab-config" class="tbc">
@@ -4468,13 +4468,14 @@ function _getFechadasPeriodo(p){
     });
   }
   if(p==='ano'){
-    const ano=new Date().getFullYear();
+    // Usa o ano que está sendo visualizado no Financeiro (mesma navegação de mês),
+    // pra ficar interligado em vez de sempre forçar o ano corrente.
     return getFechadasTodas().filter(o=>{
       const dt=new Date(o.dataExecucao||o.dataFechamento||o.dataCriacao);
-      return dt.getFullYear()===ano;
+      return dt.getFullYear()===financAno;
     });
   }
-  return getFechadasMes(); // 'mes' (padrão)
+  return getFechadasMesRef(financAno,financMes); // 'mes' (padrão) — segue o mês navegado no Financeiro
 }
 function rendRankings(){
   const periodoLabel={semana:'da Semana',mes:'do Mês',ano:'do Ano'}[_rankSrvPeriodo]||'do Mês';
