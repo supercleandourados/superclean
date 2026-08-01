@@ -1311,6 +1311,9 @@ select option{background:#0a1e38;}
 <div id="banner-nova-versao" onclick="location.reload()" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--blue);color:#fff;padding:13px 16px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;z-index:99999;box-shadow:0 -2px 12px rgba(0,0,0,.3);">
   🔄 Nova versão disponível — toque aqui para atualizar
 </div>
+<div id="banner-backup-semanal" onclick="_executarBackupAutomatico()" style="display:none;position:fixed;bottom:48px;left:0;right:0;background:var(--green);color:#fff;padding:13px 16px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;z-index:99998;box-shadow:0 -2px 12px rgba(0,0,0,.3);">
+  🛡️ Hora do backup semanal — toque aqui para salvar
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -5302,6 +5305,8 @@ function getDadosCompletos() {
     ordens,
     historico,
     agendamentos,
+    despesas,
+    deletados,
     tipos,
     precos,
     mesAtual: getMesKey(), // sempre o mês real
@@ -5521,6 +5526,8 @@ function processarImport(input) {
           ordens       = dados.ordens || [];
           historico    = dados.historico || [];
           agendamentos = dados.agendamentos || [];
+          despesas     = dados.despesas || [];
+          deletados    = dados.deletados || [];
           tipos        = dados.tipos || TIPOS_DEFAULT;
           precos       = dados.precos || {};
           mesAtual     = getMesKey(); // sempre o mês real ao restaurar
@@ -5659,26 +5666,26 @@ function verificarMesNovo() {
 
 function verificarBackupAutomatico() {
   const ultimo = localStorage.getItem(BACKUP_KEY);
-  if (!ultimo) {
-    // Primeiro uso: agendar para 7 dias
-    localStorage.setItem(BACKUP_KEY + '_agendado', new Date().toISOString());
-    atualizarStatusBackup();
-    return;
+  // Referência pra contar os 7 dias: o último backup real, ou (se nunca fez nenhum)
+  // a primeira vez que o app foi aberto — não depende mais de ninguém clicar antes.
+  let referencia = ultimo || localStorage.getItem(BACKUP_KEY + '_agendado');
+  if (!referencia) {
+    referencia = new Date().toISOString();
+    localStorage.setItem(BACKUP_KEY + '_agendado', referencia);
   }
-  const diasDesde = (Date.now() - new Date(ultimo).getTime()) / (1000 * 60 * 60 * 24);
+  const diasDesde = (Date.now() - new Date(referencia).getTime()) / (1000 * 60 * 60 * 24);
   if (diasDesde >= BACKUP_INTERVALO_DIAS) {
-    // Chegou a hora do backup automático
-    setTimeout(() => {
-      confirmar(
-        '🛡️ Backup Semanal Automático',
-        `Já faz ${Math.floor(diasDesde)} dias desde o último backup.\n\nDeseja fazer o backup agora? (Recomendado)`,
-        '📦 Fazer Backup',
-        'btn-g',
-        () => exportarJSON(false)
-      );
-    }, 3000); // 3s após abrir o app
+    // Chegou a hora do backup — mostra um aviso fixo (não bloqueia a tela) em vez de
+    // depender de alguém lembrar de abrir o Config e clicar em Backup Completo.
+    const el = document.getElementById('banner-backup-semanal');
+    if (el) el.style.display = 'block';
   }
   atualizarStatusBackup();
+}
+function _executarBackupAutomatico(){
+  const el=document.getElementById('banner-backup-semanal');
+  if(el)el.style.display='none';
+  exportarJSON(false);
 }
 
 function atualizarStatusBackup() {
