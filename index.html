@@ -1626,8 +1626,8 @@ Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]
   const master=document.getElementById('logo-master');
   const loginLogo=document.getElementById('login-logo');
   if(master&&loginLogo&&master.src)loginLogo.src=master.src;
-  // Gera um ícone com fundo preto e a logo centralizada (com espaço nas bordas),
-  // em vez de usar a imagem original esticada — evita a logo "estourando" o ícone.
+  // Gera um ícone com fundo preto e só a marca (sem o texto "Super Clean Higienização"),
+  // recortando e centralizando com espaço nas bordas — evita a logo "estourando" o ícone.
   const favicon=document.getElementById('favicon-link');
   const appleIcon=document.getElementById('apple-icon-link');
   if(master&&master.src&&(favicon||appleIcon)){
@@ -1639,10 +1639,15 @@ Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]
       const ctx=canvas.getContext('2d');
       ctx.fillStyle='#000000';
       ctx.fillRect(0,0,tam,tam);
-      const escala=0.72;
+      // Recorte da marca (círculo com o desenho), sem o texto que fica abaixo dela na imagem original
+      const pad=20;
+      const cropX=Math.max(0,472-pad), cropY=0;
+      const cropW=Math.min(img.naturalWidth,1632+pad)-cropX;
+      const cropH=Math.min(img.naturalHeight,1096+pad)-cropY;
+      const escala=0.82;
       const logoTam=tam*escala;
       const offset=(tam-logoTam)/2;
-      ctx.drawImage(img,offset,offset,logoTam,logoTam);
+      ctx.drawImage(img,cropX,cropY,cropW,cropH,offset,offset,logoTam,logoTam);
       const iconeFinal=canvas.toDataURL('image/png');
       if(favicon)favicon.href=iconeFinal;
       if(appleIcon)appleIcon.href=iconeFinal;
