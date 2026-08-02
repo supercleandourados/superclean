@@ -1626,11 +1626,28 @@ Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]
   const master=document.getElementById('logo-master');
   const loginLogo=document.getElementById('login-logo');
   if(master&&loginLogo&&master.src)loginLogo.src=master.src;
+  // Gera um ícone com fundo preto e a logo centralizada (com espaço nas bordas),
+  // em vez de usar a imagem original esticada — evita a logo "estourando" o ícone.
   const favicon=document.getElementById('favicon-link');
   const appleIcon=document.getElementById('apple-icon-link');
-  if(master&&master.src){
-    if(favicon)favicon.href=master.src;
-    if(appleIcon)appleIcon.href=master.src;
+  if(master&&master.src&&(favicon||appleIcon)){
+    const img=new Image();
+    img.onload=function(){
+      const tam=180;
+      const canvas=document.createElement('canvas');
+      canvas.width=tam;canvas.height=tam;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#000000';
+      ctx.fillRect(0,0,tam,tam);
+      const escala=0.72;
+      const logoTam=tam*escala;
+      const offset=(tam-logoTam)/2;
+      ctx.drawImage(img,offset,offset,logoTam,logoTam);
+      const iconeFinal=canvas.toDataURL('image/png');
+      if(favicon)favicon.href=iconeFinal;
+      if(appleIcon)appleIcon.href=iconeFinal;
+    };
+    img.src=master.src;
   }
 })();
 const TIPOS_DEFAULT=[
