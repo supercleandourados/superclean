@@ -2207,6 +2207,30 @@ function selecionarCliente(id){
     btnRepetir.style.display=temPedidoAnterior?'inline-block':'none';
   }
 }
+// Preenche os campos de um item (tipo/serviço/qtd/valor) a partir de um item salvo.
+// Se o tipo desse item não existe mais na lista atual (foi removido/renomeado em
+// Config → Tipos de Estofados), o <select> ficaria em branco e o item seria descartado
+// silenciosamente ao salvar (getItensList só inclui item com tipo preenchido) — recria
+// a opção temporariamente pra não perder o item.
+function _preencherItemForm(lid,item){
+  const tipEl=document.getElementById('tip_'+lid);
+  const srvEl=document.getElementById('srv_'+lid);
+  const qtdEl=document.getElementById('qtd_'+lid);
+  const vlEl=document.getElementById('vl_'+lid);
+  if(tipEl){
+    tipEl.value=item.tipo;
+    if(tipEl.value!==item.tipo&&item.tipo){
+      const optTemp=document.createElement('option');
+      optTemp.value=item.tipo;optTemp.textContent=item.tipo+' (tipo removido)';
+      tipEl.appendChild(optTemp);
+      tipEl.value=item.tipo;
+    }
+  }
+  if(srvEl)srvEl.value=item.srv;
+  if(qtdEl)qtdEl.value=item.qtd||1;
+  if(vlEl)vlEl.value=(item.vl||0).toFixed(2).replace('.',',');
+  calcItem(lid);
+}
 function _getUltimoPedidoCliente(cliId){
   const pedidos=getTodasOS().filter(o=>o.cliId===cliId&&o.itens&&o.itens.length);
   if(!pedidos.length)return null;
@@ -2220,16 +2244,7 @@ function repetirUltimoPedido(){
   ic=0;
   ultimo.itens.forEach(item=>{
     addItem();
-    const lid='i'+ic;
-    const tipEl=document.getElementById('tip_'+lid);
-    const srvEl=document.getElementById('srv_'+lid);
-    const qtdEl=document.getElementById('qtd_'+lid);
-    const vlEl=document.getElementById('vl_'+lid);
-    if(tipEl)tipEl.value=item.tipo;
-    if(srvEl)srvEl.value=item.srv;
-    if(qtdEl)qtdEl.value=item.qtd||1;
-    if(vlEl)vlEl.value=(item.vl||0).toFixed(2).replace('.',',');
-    calcItem(lid);
+    _preencherItemForm('i'+ic,item);
   });
   calcTotais();
   toast('🔁 Itens do último pedido preenchidos — confira os valores antes de salvar');
@@ -2796,16 +2811,7 @@ function editarOS(osId){
   ic=0;
   (os.itens&&os.itens.length?os.itens:[]).forEach(item=>{
     addItem();
-    const lid='i'+ic;
-    const tipEl=document.getElementById('tip_'+lid);
-    const srvEl=document.getElementById('srv_'+lid);
-    const qtdEl=document.getElementById('qtd_'+lid);
-    const vlEl=document.getElementById('vl_'+lid);
-    if(tipEl)tipEl.value=item.tipo;
-    if(srvEl)srvEl.value=item.srv;
-    if(qtdEl)qtdEl.value=item.qtd||1;
-    if(vlEl)vlEl.value=(item.vl||0).toFixed(2).replace('.',',');
-    calcItem(lid);
+    _preencherItemForm('i'+ic,item);
   });
   if(!os.itens||!os.itens.length)addItem();
   const descValEl=document.getElementById('t-desc-val');
@@ -5534,6 +5540,7 @@ function getDadosCompletos() {
     agendamentos,
     despesas,
     deletados,
+    compromissos,
     tipos,
     precos,
     mesAtual: getMesKey(), // sempre o mês real
@@ -5755,6 +5762,7 @@ function processarImport(input) {
           agendamentos = dados.agendamentos || [];
           despesas     = dados.despesas || [];
           deletados    = dados.deletados || [];
+          compromissos = dados.compromissos || [];
           tipos        = dados.tipos || TIPOS_DEFAULT;
           precos       = dados.precos || {};
           mesAtual     = getMesKey(); // sempre o mês real ao restaurar
