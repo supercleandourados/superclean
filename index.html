@@ -1046,6 +1046,10 @@ select option{background:#0a1e38;}
           <span style="font-size:13px;color:var(--muted);">localStorage usado</span>
           <span style="font-size:13px;font-weight:700;" id="ss-ls-uso">—</span>
         </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;color:var(--muted);">Documento na nuvem (limite 1MB)</span>
+          <span style="font-size:13px;font-weight:700;" id="ss-doc-nuvem">—</span>
+        </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
           <span style="font-size:13px;color:var(--muted);">Firebase (plano gratuito)</span>
           <a href="https://console.firebase.google.com/project/superclean-2130d/usage" target="_blank"
@@ -5874,6 +5878,28 @@ function atualizarSaudeSistema(){
     }
   } catch(e) {
     elLs.textContent = 'Não disponível';
+  }
+
+  // Tamanho aproximado do documento único sincronizado no Firestore (limite real: 1MB).
+  // Aviso cedo (a partir de 25%) — dá tempo de planejar uma reestruturação com calma,
+  // bem antes de virar um problema de verdade.
+  const elDoc = document.getElementById('ss-doc-nuvem');
+  if(elDoc){
+    try {
+      const bytesDoc = JSON.stringify(ordens).length + JSON.stringify(historico).length +
+        JSON.stringify(agendamentos).length + JSON.stringify(despesas).length +
+        JSON.stringify(deletados).length + JSON.stringify(compromissos).length +
+        JSON.stringify(tipos).length + JSON.stringify(precos).length;
+      const LIMITE_DOC = 1024*1024; // 1MB — limite real do Firestore por documento
+      const kbDoc = (bytesDoc/1024).toFixed(0);
+      const pctDoc = Math.min(100, Math.round(bytesDoc/LIMITE_DOC*100));
+      const corDoc = pctDoc>=50?'var(--red)':pctDoc>=25?'var(--orange)':'var(--green)';
+      elDoc.textContent = `${kbDoc} KB / 1024 KB (${pctDoc}%)`;
+      elDoc.style.color = corDoc;
+      if(pctDoc>=25) elDoc.textContent += pctDoc>=50?' ⚠️ Planejar reestruturação':' 👀 Ficar de olho';
+    } catch(e) {
+      elDoc.textContent = 'Não disponível';
+    }
   }
 }
 
