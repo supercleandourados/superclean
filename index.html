@@ -296,6 +296,7 @@ select option{background:#0a1e38;}
 .cal-badge.exec-badge{background:rgba(42,171,238,.25);color:var(--sky);}
 .cal-badge.canc-badge{background:rgba(229,57,53,.15);color:var(--red);}
 .cal-badge.val-badge{background:rgba(76,175,34,.18);color:var(--green);font-size:10px;font-weight:800;margin-top:1px;}
+.cal-badge.compr-badge{background:rgba(156,39,176,.25);color:#ce93d8;}
 .cal-empty{background:transparent;border:none;cursor:default;}
 .cal-empty:hover{border:none;}
 /* LISTA AGENDAMENTOS DO DIA */
@@ -635,6 +636,8 @@ select option{background:#0a1e38;}
       </div>
       <button class="btn btn-o" onclick="agendaHoje()" style="font-size:12px;padding:7px 14px;">Hoje</button>
     </div>
+
+    <button class="btn btn-o" onclick="abrirModalCompromisso()" style="width:100%;margin-bottom:12px;font-size:13px;border-color:rgba(156,39,176,.4);color:#ce93d8;">📌 Novo Compromisso (sem cliente)</button>
 
     <!-- Busca na agenda/histórico -->
     <input type="text" id="agenda-busca" placeholder="🔍 Buscar por cliente ou nº OS neste mês..." oninput="debounceRendAgenda()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:#fff;font-size:13px;margin-bottom:12px;">
@@ -1269,6 +1272,20 @@ select option{background:#0a1e38;}
     </div>
   </div>
 </div>
+
+<!-- MODAL COMPROMISSO (sem cliente/OS — só data, hora e descrição) -->
+<div class="modal-overlay" id="modal-compromisso">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">📌 Novo Compromisso</div>
+    <div class="field"><label>Data *</label><input type="date" id="compromisso-data"></div>
+    <div class="field"><label>Horário</label><input type="time" id="compromisso-hora"></div>
+    <div class="field"><label>Descrição *</label><input type="text" id="compromisso-titulo" placeholder="Ex: Reunião com fornecedor"></div>
+    <div class="brow">
+      <button class="btn btn-o" onclick="fecharModal('modal-compromisso')" style="flex:1;">Cancelar</button>
+      <button class="btn btn-g" onclick="addCompromisso()" style="flex:1;">💾 Salvar</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-remarcar">
   <div class="modal" style="max-width:400px;">
     <div class="modal-title">📅 Remarcar Agendamento</div>
@@ -1447,6 +1464,7 @@ async function _fbSalvarReal() {
       agendamentos: JSON.stringify(window._sc.agendamentos),
       despesas:     JSON.stringify(window._sc.despesas),
       deletados:    JSON.stringify(window._sc.deletados),
+      compromissos: JSON.stringify(window._sc.compromissos),
       tipos:        JSON.stringify(window._sc.tipos),
       precos:       JSON.stringify(window._sc.precos),
       mesAtual:     getMesKey(), // sempre o mês real
@@ -1564,6 +1582,7 @@ onSnapshot(REF, (snap) => {
       window._sc.deletados = Object.values(mapaDel);
       localStorage.setItem('sc_deletados', JSON.stringify(window._sc.deletados));
     }
+    if(d.compromissos) { window._sc.compromissos = JSON.parse(d.compromissos); localStorage.setItem('sc_compromissos', d.compromissos); }
     if(d.tipos)        { window._sc.tipos        = JSON.parse(d.tipos)||window._sc.TIPOS_DEFAULT; localStorage.setItem('sc_tipos', d.tipos); }
     if(d.precos)       { window._sc.precos       = JSON.parse(d.precos);       localStorage.setItem('sc_precos',     d.precos); }
     // mesAtual não é mais sincronizado — é sempre getMesKey() local
@@ -1596,6 +1615,7 @@ Promise.all([getDoc(REF), window.fbCarregarClientes()]).then(([snap, clientesFB]
       if(d.despesas)     localStorage.setItem('sc_despesas',   d.despesas);
       if(d.tipos)        localStorage.setItem('sc_tipos',      d.tipos);
       if(d.deletados)    localStorage.setItem('sc_deletados',  d.deletados);
+      if(d.compromissos) localStorage.setItem('sc_compromissos', d.compromissos);
       if(d.precos)       localStorage.setItem('sc_precos',     d.precos);
       // mesAtual não restaurado do Firebase — sempre usa calendário real
       if(d.osCounter)    localStorage.setItem('sc_os_counter', d.osCounter);
@@ -1716,6 +1736,8 @@ let despesas   = [];
 // Tombstones de exclusão — {tipo:'os'|'ag', id, ts} — impede que um registro excluído
 // "ressuscite" ao sincronizar com a nuvem (ver mesclarPorId no bloco Firebase).
 let deletados  = [];
+// Compromissos avulsos na agenda — sem cliente/OS, só data+hora+descrição (ex: reunião)
+let compromissos = [];
 let tipos      = TIPOS_DEFAULT;
 let precos     = {};
 // mesAtual é sempre o mês real do calendário — automático, sem virada manual
@@ -1745,6 +1767,8 @@ window._sc = {
   set despesas(v)    { despesas = v; },
   get deletados()    { return deletados; },
   set deletados(v)   { deletados = v; },
+  get compromissos() { return compromissos; },
+  set compromissos(v){ compromissos = v; },
   get tipos()        { return tipos; },
   set tipos(v)       { tipos = v; },
   get precos()       { return precos; },
@@ -1957,12 +1981,13 @@ function init(){
       agendamentos = JSON.parse(localStorage.getItem('sc_agenda')     ||'[]');
       despesas     = JSON.parse(localStorage.getItem('sc_despesas')   ||'[]');
       deletados    = JSON.parse(localStorage.getItem('sc_deletados')  ||'[]');
+      compromissos = JSON.parse(localStorage.getItem('sc_compromissos')||'[]');
       tipos        = JSON.parse(localStorage.getItem('sc_tipos')      ||'null') || TIPOS_DEFAULT;
       precos       = JSON.parse(localStorage.getItem('sc_precos')     ||'{}');
     } catch(e) {
       // localStorage corrompido — iniciar com dados vazios (não trava o app)
       console.warn('localStorage corrompido, iniciando zerado:', e);
-      clientes=[]; ordens=[]; historico=[]; agendamentos=[]; despesas=[]; deletados=[];
+      clientes=[]; ordens=[]; historico=[]; agendamentos=[]; despesas=[]; deletados=[]; compromissos=[];
       tipos=TIPOS_DEFAULT; precos={};
     }
     // Poda tombstones com mais de 180 dias — já teriam sido sincronizados em todo dispositivo
@@ -2080,6 +2105,7 @@ function salvarLocal(opts) {
   if(tudo || opts?.historico) _lsSet('sc_historico',  JSON.stringify(historico));
   if(tudo || opts?.agenda)    _lsSet('sc_agenda',     JSON.stringify(agendamentos));
   if(tudo || opts?.despesas)  _lsSet('sc_despesas',   JSON.stringify(despesas));
+  if(tudo || opts?.compromissos) _lsSet('sc_compromissos', JSON.stringify(compromissos));
   if(tudo || opts?.ordens || opts?.agenda) _lsSet('sc_deletados', JSON.stringify(deletados));
   if(tudo || opts?.tipos)     _lsSet('sc_tipos',      JSON.stringify(tipos));
   if(tudo || opts?.precos)    _lsSet('sc_precos',     JSON.stringify(precos));
@@ -3277,6 +3303,49 @@ function agendaHoje(){
   agendaMes=d.getMonth();agendaAno=d.getFullYear();
   rendAgenda();
 }
+function abrirModalCompromisso(dataPreenchida){
+  const dataEl=document.getElementById('compromisso-data');
+  const horaEl=document.getElementById('compromisso-hora');
+  const tituloEl=document.getElementById('compromisso-titulo');
+  if(dataEl)dataEl.value=dataPreenchida||today();
+  if(horaEl)horaEl.value='';
+  if(tituloEl)tituloEl.value='';
+  abrirModal('modal-compromisso');
+}
+function addCompromisso(){
+  const dataEl=document.getElementById('compromisso-data');
+  const horaEl=document.getElementById('compromisso-hora');
+  const tituloEl=document.getElementById('compromisso-titulo');
+  const data=dataEl?.value||'';
+  const hora=horaEl?.value||'';
+  const titulo=(tituloEl?.value||'').trim();
+  if(!data){toast('⚠️ Informe a data',true);return;}
+  if(!titulo){toast('⚠️ Descreva o compromisso',true);return;}
+  compromissos.push({id:'cp_'+Date.now(),data,hora,titulo,criadoEm:new Date().toISOString()});
+  salvarLocal({compromissos:true});
+  fecharModal('modal-compromisso');
+  fecharModal('modal-ag-dia');
+  rendAgenda();
+  toast('📌 Compromisso adicionado!');
+}
+function rmCompromisso(id){
+  const c=compromissos.find(x=>x.id===id);
+  if(!c)return;
+  confirmar('🗑️ Excluir compromisso',`Excluir "${c.titulo}"?`,'🗑️ Excluir','btn-d',()=>{
+    compromissos=compromissos.filter(x=>x.id!==id);
+    salvarLocal({compromissos:true});
+    fecharModal('modal-ag-dia');
+    rendAgenda();
+    toast('🗑️ Compromisso excluído');
+  });
+}
+function getCompromissosMes(ano,mes){
+  const key=ano+'-'+String(mes+1).padStart(2,'0');
+  return compromissos.filter(c=>c.data&&c.data.startsWith(key));
+}
+function getCompromissosDia(dStr){
+  return compromissos.filter(c=>c.data===dStr);
+}
 function getAgsMes(ano,mes){
   const key=ano+'-'+String(mes+1).padStart(2,'0');
   // Agendamentos reais do mês (Dia 1 OU Dia 2 cai neste mês)
@@ -3383,6 +3452,13 @@ function rendCalendario(ano,mes,agsMes){
   const diasAntMes=new Date(ano,mes,0).getDate();
   const feriados=getFeriados(ano);
 
+  // Mapa: dia -> compromissos (avulsos, sem cliente)
+  const mapaCompr={};
+  getCompromissosMes(ano,mes).forEach(c=>{
+    const dc=parseInt((c.data||'').split('-')[2]);
+    if(dc){ if(!mapaCompr[dc])mapaCompr[dc]=[]; mapaCompr[dc].push(c); }
+  });
+
   // Mapa: dia -> agendamentos
   const mapaAg={};
   agsMes.forEach(ag=>{
@@ -3415,7 +3491,8 @@ function rendCalendario(ano,mes,agsMes){
     const dStr=ano+'-'+String(mes+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     const isHoje=dStr===hoje_str;
     const ags=mapaAg[d]||[];
-    const temAg=ags.length>0;
+    const comprDia=mapaCompr[d]||[];
+    const temAg=ags.length>0||comprDia.length>0;
     const isFer=!!feriados[dStr];
 
     // Classificar serviços do dia por status
@@ -3435,6 +3512,7 @@ function rendCalendario(ano,mes,agsMes){
     if(listaPend.length)  badges+=`<span class="cal-badge pend">${listaPend.length} pend.</span>`;
     if(listaCanc.length)  badges+=`<span class="cal-badge canc-badge">${listaCanc.length} canc.</span>`;
     if(valorFmt)          badges+=`<span class="cal-badge val-badge">${valorFmt}</span>`;
+    if(comprDia.length)   badges+=`<span class="cal-badge compr-badge">📌 ${comprDia.length}</span>`;
 
     html+=`<div class="cal-day${isHoje?' today':''}${temAg?' tem-agenda':''}${isFer?' feriado':''}" onclick="abrirDiaAgenda('${dStr}',${d})">
       <div class="cal-day-num">${d}</div>${badges}
@@ -3504,12 +3582,26 @@ function abrirDiaAgenda(dStr,dNum){
       ? `${agsValidos.length} serviço${agsValidos.length!==1?'s':''} · Total: ${fmtMoeda(totalDia)}`
       : '';
   }
-  if(!ags.length){
+  const comprDia=getCompromissosDia(dStr);
+  const htmlAgs=ags.length?ags.sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')).map(ag=>buildAgCard(ag,true)).join(''):'';
+  const htmlCompr=comprDia.length?comprDia.sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')).map(c=>buildCompromissoCard(c)).join(''):'';
+  if(!ags.length&&!comprDia.length){
     document.getElementById('modal-ag-dia-body').innerHTML='<div class="empty">Nenhum serviço neste dia</div>';
   } else {
-    document.getElementById('modal-ag-dia-body').innerHTML=ags.sort((a,b)=>(a.hora||'').localeCompare(b.hora||'')).map(ag=>buildAgCard(ag,true)).join('');
+    document.getElementById('modal-ag-dia-body').innerHTML=htmlAgs+htmlCompr;
   }
   abrirModal('modal-ag-dia');
+}
+function buildCompromissoCard(c){
+  return `<div class="ag-item" style="border-left:3px solid #9C27B0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <span style="font-size:15px;font-weight:700;color:#fff;">📌 ${c.titulo}</span>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">🕐 ${c.hora||'Sem horário definido'}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="btn btn-d" style="padding:6px 12px;font-size:12px;" onclick="rmCompromisso('${c.id}')">🗑️ Excluir</button>
+    </div>
+  </div>`;
 }
 
 function rendListaAgenda(ags,titleId,listaId,titulo){
@@ -4675,14 +4767,15 @@ function rendCardHoje(){
   const agHoje=agendamentos.filter(a=>{
     const os=todasOSMapa[a.osId];
     return (a.data===hj||a.data2===hj)&&os&&os.status!=='cancelado';
-  }).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
+  });
+  const comprHoje=getCompromissosDia(hj);
   const el=document.getElementById('ag-hoje-lista');
   if(!el)return;
-  if(!agHoje.length){
+  if(!agHoje.length&&!comprHoje.length){
     el.innerHTML='<div style="color:var(--muted);font-size:13px;text-align:center;padding:8px 0;">🎉 Nenhum serviço hoje — dia livre!</div>';
     return;
   }
-  el.innerHTML=agHoje.map(a=>{
+  const itensAg=agHoje.map(a=>({hora:a.hora||'',html:(()=>{
     const os=todasOSMapa[a.osId];
     const executado=os&&os.executado===true;
     const stCor=executado?'var(--sky)':'var(--green)';
@@ -4694,7 +4787,14 @@ function rendCardHoje(){
       </div>
       <span style="color:${stCor};font-size:18px;">${stIco}</span>
     </div>`;
-  }).join('');
+  })()}));
+  const itensCompr=comprHoje.map(c=>({hora:c.hora||'',html:`<div class="ag-hoje-item">
+    <div>
+      <div class="ag-hoje-nome">📌 ${c.titulo}</div>
+      <div class="ag-hoje-info">${c.hora||'Sem horário'}</div>
+    </div>
+  </div>`}));
+  el.innerHTML=[...itensAg,...itensCompr].sort((a,b)=>a.hora.localeCompare(b.hora)).map(i=>i.html).join('');
 }
 // rendHistoricoCompleto já existe — vamos sobrescrever com filtro de busca
 let filtroMesAtual='todos';
