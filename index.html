@@ -3086,7 +3086,6 @@ function gerarPDF(){
   const _logoSrc=(document.getElementById('logo-master')||{}).src||'';
   const os=osCompartilhar;
   const dataOrc=os.dataOrc?fmtData(os.dataOrc):new Date(os.dataCriacao).toLocaleDateString('pt-BR');
-  const total5x=fmtMoeda(os.total/5);
   const itensHtml=os.itens.map(i=>{
     const qtd=i.qtd>1?i.qtd+'×':'1×';
     return '<tr>'
@@ -3186,8 +3185,7 @@ function gerarPDF(){
     +'<div class="pgto-grid">'
     +'<div class="pgto-item"><span class="pgto-label">Dinheiro</span><span class="pgto-sub">A vista</span></div>'
     +'<div class="pgto-item"><span class="pgto-label">PIX</span><span class="pgto-sub">A vista</span></div>'
-    +'<div class="pgto-item"><span class="pgto-label">Cart&atilde;o</span><span class="pgto-sub">at&eacute; 5x sem juros</span></div>'
-    +'<div class="pgto-item"><span class="pgto-label">Parcelado</span><span class="pgto-sub">5x de '+total5x+'</span></div>'
+    +'<div class="pgto-item"><span class="pgto-label">Cart&atilde;o de Cr&eacute;dito</span><span class="pgto-sub">at&eacute; 5x sem juros</span></div>'
     +'</div>'
     +'</div>'
     +'<div class="footer">'
