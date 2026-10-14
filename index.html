@@ -869,6 +869,7 @@ select option{background:#0a1e38;}
         <div class="field"><label>Nome *</label><input type="text" id="nc2-nome" placeholder="Nome completo"></div>
         <div class="field"><label>WhatsApp *</label><input type="text" id="nc2-wpp" placeholder="(67) 99999-9999" oninput="fmtFone2(this)"></div>
         <div class="field"><label>Bairro / Endereço</label><input type="text" id="nc2-end" placeholder="Bairro ou rua"></div>
+        <div class="field"><label>CPF / CNPJ (opcional)</label><input type="text" id="nc2-doc" inputmode="numeric" placeholder="Para empresas: CNPJ" oninput="fmtDoc(this)"></div>
         <button class="btn btn-g" style="width:100%" onclick="salvarCliente2()">✅ Cadastrar Cliente</button>
       </div>
     </div>
@@ -1115,6 +1116,7 @@ select option{background:#0a1e38;}
     <div class="field"><label>Nome *</label><input type="text" id="edcli-nome" placeholder="Nome completo"></div>
     <div class="field"><label>WhatsApp *</label><input type="text" id="edcli-wpp" placeholder="(67) 99999-9999" oninput="fmtFone2(this)"></div>
     <div class="field"><label>Bairro / Endereço</label><input type="text" id="edcli-end" placeholder="Bairro ou rua"></div>
+    <div class="field"><label>CPF / CNPJ (opcional)</label><input type="text" id="edcli-doc" inputmode="numeric" placeholder="Para empresas: CNPJ" oninput="fmtDoc(this)"></div>
     <div class="brow" style="margin-top:20px;">
       <button class="btn btn-o" onclick="cancelarEdicaoCliente()" style="flex:1;">Cancelar</button>
       <button class="btn btn-g" onclick="salvarEdicaoCliente()" style="flex:1;">💾 Salvar</button>
@@ -1352,6 +1354,7 @@ select option{background:#0a1e38;}
     <div id="modal-cad-rapido-nome-label" style="font-size:14px;color:var(--muted);margin-bottom:12px;"></div>
     <div class="field"><label>WhatsApp *</label><input type="text" id="modal-cad-rapido-wpp" placeholder="(67) 99999-9999" oninput="fmtFoneModal(this)"></div>
     <div class="field"><label>Bairro/Endereço (opcional)</label><input type="text" id="modal-cad-rapido-end" placeholder="Bairro ou rua"></div>
+    <div class="field"><label>CPF / CNPJ (opcional)</label><input type="text" id="modal-cad-rapido-doc" inputmode="numeric" placeholder="Para empresas: CNPJ" oninput="fmtDoc(this)"></div>
     <div class="brow">
       <button class="btn btn-o" onclick="fecharModal('modal-cad-rapido')" style="flex:1;">Cancelar</button>
       <button class="btn btn-g" id="modal-cad-rapido-ok" style="flex:1;">✅ Cadastrar</button>
@@ -1500,7 +1503,7 @@ window.fbSalvarClientes = async function(lista) {
       const batch = writeBatch(db);
       todos.slice(i, i + BATCH).forEach(c => {
         batch.set(doc(db, 'superclean_clientes', String(c.id)), {
-          id: c.id, nome: c.nome||'', wpp: c.wpp||'', end: c.end||'',
+          id: c.id, nome: c.nome||'', wpp: c.wpp||'', end: c.end||'', cpfCnpj: c.cpfCnpj||'',
           criado: c.criado||new Date().toISOString(),
           origem: c.origem||'', categoria: c.categoria||'',
           totalGastoHistorico: c.totalGastoHistorico||0
@@ -2154,9 +2157,11 @@ function _renderUIaposAcao() {
     }
   });
 }
-function _salvarClienteCommon(nome, wpp, end, cbClear){
+function _salvarClienteCommon(nome, wpp, end, cbClear, cpfCnpj){
   if(!nome){toast('⚠️ Nome obrigatório',true);return false;}
   if(!wpp){toast('⚠️ WhatsApp obrigatório',true);return false;}
+  cpfCnpj=(cpfCnpj||'').trim();
+  if(docInvalido(cpfCnpj)){toast('⚠️ CPF deve ter 11 dígitos ou CNPJ 14 dígitos',true);return false;}
   // Proteção contra duplicidade: verificar por WhatsApp e por nome similar
   const wppNum=(wpp||'').replace(/\D/g,'');
   const dupWpp=wppNum.length>=8&&clientes.find(c=>(c.wpp||'').replace(/\D/g,'')===wppNum);
@@ -2170,7 +2175,9 @@ function _salvarClienteCommon(nome, wpp, end, cbClear){
     toast(`⚠️ Já existe um cliente com o nome "${dupNome.nome}"`,true);
     return false;
   }
-  clientes.push({id:Date.now(),nome,wpp,end,criado:new Date().toISOString()});
+  const novo={id:Date.now(),nome,wpp,end,criado:new Date().toISOString()};
+  if(cpfCnpj)novo.cpfCnpj=cpfCnpj;
+  clientes.push(novo);
   salvarLocal(true);
   if(cbClear)cbClear();
   updStats();rendClientes();
@@ -2180,7 +2187,8 @@ function _salvarClienteCommon(nome, wpp, end, cbClear){
 function buscaCliente(q){
   const list=document.getElementById('ac-list');
   if(!q||q.length<2){list.style.display='none';return;}
-  const r=clientes.filter(c=>c.nome.toLowerCase().includes(q.toLowerCase())||c.wpp.includes(q));
+  const qd=q.replace(/\D/g,'');
+  const r=clientes.filter(c=>c.nome.toLowerCase().includes(q.toLowerCase())||c.wpp.includes(q)||(qd.length>=3&&(c.cpfCnpj||'').replace(/\D/g,'').includes(qd)));
   let html=r.map(c=>`<div class="ac-item" onclick="selecionarCliente(${c.id})">${c.nome} <span style="color:var(--muted);font-size:11px;">${c.wpp}</span></div>`).join('');
   // Atalho cadastrar novo
   html+=`<div class="ac-item" style="color:var(--green);border-top:1px solid var(--border);margin-top:4px;" onclick="cadastrarNovoRapido('${q.replace(/'/g,"\\'")}')">➕ Cadastrar "${q}" como novo cliente</div>`;
@@ -2196,7 +2204,7 @@ function selecionarCliente(id){
   document.getElementById('cli-input').style.display='none';
   document.getElementById('cli-selecionado').style.display='block';
   document.getElementById('cli-sel-nome').textContent=c.nome;
-  document.getElementById('cli-sel-info').textContent=c.wpp+(c.end?' · '+c.end:'');
+  document.getElementById('cli-sel-info').textContent=c.wpp+(c.end?' · '+c.end:'')+(c.cpfCnpj?' · '+c.cpfCnpj:'');
   // Preencher local com endereço do cliente (editável)
   const localEl=document.getElementById('local-servico');
   if(localEl&&c.end&&!localEl.value)localEl.value=c.end;
@@ -2475,7 +2483,8 @@ function rendClientes() {
     arr = arr.filter(c =>
       c.nome.toLowerCase().includes(q) ||
       (c.wpp || '').includes(q) ||
-      (c.end || '').toLowerCase().includes(q)
+      (c.end || '').toLowerCase().includes(q) ||
+      (q.replace(/\D/g,'').length >= 3 && (c.cpfCnpj || '').replace(/\D/g,'').includes(q.replace(/\D/g,'')))
     );
     _cliPagina = 0; // reset página na busca
   }
@@ -2571,6 +2580,7 @@ function verCliente(id){
     <div style="font-size:13px;color:var(--muted);line-height:1.8;">
       📱 <a href="https://wa.me/55${(c.wpp||'').replace(/\D/g,'')}" target="_blank" style="color:var(--sky);text-decoration:none;">${c.wpp}</a>
       ${c.end?'<br>📍 '+c.end:''}
+      ${c.cpfCnpj?'<br>🏢 '+c.cpfCnpj:''}
       ${c.criado?'<br>📅 Cliente desde '+new Date(c.criado).toLocaleDateString('pt-BR'):''}
       ${c.totalGastoHistorico?'<br>📦 Histórico importado: '+fmtMoeda(c.totalGastoHistorico):''}
     </div>
@@ -2612,6 +2622,7 @@ function abrirEdicaoCliente(id){
   document.getElementById('edcli-nome').value=c.nome||'';
   document.getElementById('edcli-wpp').value=c.wpp||'';
   document.getElementById('edcli-end').value=c.end||'';
+  document.getElementById('edcli-doc').value=c.cpfCnpj||'';
   fecharModal('modal-cli');
   abrirModal('modal-cli-editar');
   setTimeout(()=>document.getElementById('edcli-nome')?.focus(),150);
@@ -2626,8 +2637,10 @@ function salvarEdicaoCliente(){
   const nome=document.getElementById('edcli-nome').value.trim();
   const wpp=document.getElementById('edcli-wpp').value.trim();
   const end=document.getElementById('edcli-end').value.trim();
+  const cpfCnpj=document.getElementById('edcli-doc').value.trim();
   if(!nome){toast('⚠️ Nome obrigatório',true);return;}
   if(!wpp){toast('⚠️ WhatsApp obrigatório',true);return;}
+  if(docInvalido(cpfCnpj)){toast('⚠️ CPF deve ter 11 dígitos ou CNPJ 14 dígitos',true);return;}
   // Proteção contra duplicidade, ignorando o próprio cliente
   const wppNum=wpp.replace(/\D/g,'');
   const dupWpp=wppNum.length>=8&&clientes.find(x=>x.id!==id&&(x.wpp||'').replace(/\D/g,'')===wppNum);
@@ -2636,6 +2649,7 @@ function salvarEdicaoCliente(){
   if(dupWpp){toast(`⚠️ Já existe outro cliente com este WhatsApp: ${dupWpp.nome}`,true);return;}
   if(dupNome){toast(`⚠️ Já existe outro cliente com o nome "${dupNome.nome}"`,true);return;}
   c.nome=nome;c.wpp=wpp;c.end=end;
+  if(cpfCnpj)c.cpfCnpj=cpfCnpj;else delete c.cpfCnpj;
   salvarLocal(true);
   fecharModal('modal-cli-editar');
   rendClientes();updStats();
@@ -2755,6 +2769,7 @@ function salvarOS(){
     if(!os){toast('⚠️ OS não encontrada',true);_editandoOSId=null;return;}
     os.itens=itens;os.subtotal=sub;os.desconto=desconto;os.total=total;os.dataOrc=dataOrc;
     os.localServico=localServico;os.obs=obs;os.updatedAt=Date.now();
+    if(cliSelecionado.cpfCnpj)os.cliDoc=cliSelecionado.cpfCnpj;
     // Se a OS já estava agendada, o agendamento reflete o novo valor/serviços
     const ag=agendamentos.find(a=>a.osId===os.id);
     if(ag){ag.valor=os.total;ag.servico=os.itens.map(i=>i.tipo+' ('+i.srvNome+')').join(', ');ag.updatedAt=Date.now();}
@@ -2768,7 +2783,7 @@ function salvarOS(){
   osCounter++;
   const os={
     id:Date.now(),numero:osCounter,
-    cliId:cliSelecionado.id,cliNome:cliSelecionado.nome,cliWpp:cliSelecionado.wpp,cliEnd:cliSelecionado.end||'',
+    cliId:cliSelecionado.id,cliNome:cliSelecionado.nome,cliWpp:cliSelecionado.wpp,cliEnd:cliSelecionado.end||'',cliDoc:cliSelecionado.cpfCnpj||'',
     itens,subtotal:sub,desconto,total,dataOrc,
     localServico,obs,
     status:'pendente',
@@ -2796,13 +2811,13 @@ function editarOS(osId){
   fecharModal('modal-ag-dia');
   _editandoOSId=os.id;
   mudarTab('nova-os');
-  cliSelecionado={id:os.cliId,nome:os.cliNome,wpp:os.cliWpp,end:os.cliEnd||''};
+  cliSelecionado={id:os.cliId,nome:os.cliNome,wpp:os.cliWpp,end:os.cliEnd||'',cpfCnpj:getDocOS(os)};
   document.getElementById('cli-input').style.display='none';
   document.getElementById('cli-input').value='';
   document.getElementById('ac-list').style.display='none';
   document.getElementById('cli-selecionado').style.display='block';
   document.getElementById('cli-sel-nome').textContent=cliSelecionado.nome;
-  document.getElementById('cli-sel-info').textContent=(cliSelecionado.wpp||'')+(cliSelecionado.end?' · '+cliSelecionado.end:'');
+  document.getElementById('cli-sel-info').textContent=(cliSelecionado.wpp||'')+(cliSelecionado.end?' · '+cliSelecionado.end:'')+(cliSelecionado.cpfCnpj?' · '+cliSelecionado.cpfCnpj:'');
   document.getElementById('data-orc').value=os.dataOrc||hoje();
   const localEl=document.getElementById('local-servico');
   if(localEl)localEl.value=os.localServico||'';
@@ -3051,7 +3066,9 @@ function gerarTextoWpp(os){
   }).join('\n');
   const dataOrc=os.dataOrc?fmtData(os.dataOrc):new Date(os.dataCriacao).toLocaleDateString('pt-BR');
   const localLinha=os.localServico?`📍 Local: ${os.localServico}\n`:'';
-  return `Olá, ${os.cliNome}! 👋\n\nSegue o orçamento da *SUPER CLEAN - Higienização* 🧹✨\n📋 OS #${String(os.numero).padStart(4,'0')}\n📅 Data: ${dataOrc}\n${localLinha}\n*SERVIÇOS:*\n${itens}\n\n━━━━━━━━━━━━━━━━━━\n💰 *TOTAL: ${fmtMoeda(os.total)}*\n━━━━━━━━━━━━━━━━━━\n${os.obs?'📝 '+os.obs+'\n':''}\n📞 Para confirmar, responda essa mensagem!\n\n🌐 supercleandourados.com.br`;
+  const docOS=getDocOS(os);
+  const docLinha=docOS?`🏢 CPF/CNPJ: ${docOS}\n`:'';
+  return `Olá, ${os.cliNome}! 👋\n\nSegue o orçamento da *SUPER CLEAN - Higienização* 🧹✨\n📋 OS #${String(os.numero).padStart(4,'0')}\n📅 Data: ${dataOrc}\n${docLinha}${localLinha}\n*SERVIÇOS:*\n${itens}\n\n━━━━━━━━━━━━━━━━━━\n💰 *TOTAL: ${fmtMoeda(os.total)}*\n━━━━━━━━━━━━━━━━━━\n${os.obs?'📝 '+os.obs+'\n':''}\n📞 Para confirmar, responda essa mensagem!\n\n🌐 supercleandourados.com.br`;
 }
 function copiarWpp(){
   if(!osCompartilhar)return;
@@ -3148,6 +3165,7 @@ function gerarPDF(){
     +'  <div class="cli-box"><div class="cli-label">WhatsApp</div><div class="cli-val">'+(os.cliWpp||'&mdash;')+'</div></div>'
     +'  <div class="cli-box green"><div class="cli-label" style="color:#4CAF22">Data do Or&ccedil;amento</div><div class="cli-val">'+dataOrc+'</div></div>'
     +'  <div class="cli-box green"><div class="cli-label" style="color:#4CAF22">Endere&ccedil;o</div><div class="cli-val">'+(os.cliEnd||'Dourados &ndash; MS')+'</div></div>'
+    +(getDocOS(os)?'  <div class="cli-box" style="grid-column:1/-1;"><div class="cli-label">CPF / CNPJ</div><div class="cli-val">'+getDocOS(os)+'</div></div>':'')
     +'</div>'
     +obsBlock
     +'<table>'
@@ -4615,6 +4633,27 @@ function abrirModalCliente(){
     }
   },150);
 }
+// CPF/CNPJ: máscara automática (11 dígitos = CPF, 14 = CNPJ). Campo opcional.
+function fmtDoc(el){
+  let v=el.value.replace(/\D/g,'').slice(0,14);
+  if(v.length<=11){
+    v=v.replace(/^(\d{3})(\d)/,'$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d{1,2})$/,'.$1-$2');
+  }else{
+    v=v.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d)/,'$1-$2');
+  }
+  el.value=v;
+}
+// Vazio é válido (opcional); preenchido precisa ter 11 (CPF) ou 14 (CNPJ) dígitos
+function docInvalido(doc){
+  const d=(doc||'').replace(/\D/g,'');
+  return d.length>0&&d.length!==11&&d.length!==14;
+}
+// CPF/CNPJ da OS: usa o gravado na OS; se for antiga (sem), busca no cadastro atual do cliente
+function getDocOS(os){
+  if(os.cliDoc)return os.cliDoc;
+  const c=clientes.find(x=>x.id===os.cliId);
+  return (c&&c.cpfCnpj)||'';
+}
 function fmtFone2(el){
   let v=el.value.replace(/\D/g,'');
   if(v.length<=10)v=v.replace(/(\d{2})(\d{4})(\d*)/,'($1) $2-$3');
@@ -5488,11 +5527,15 @@ function cadastrarNovoRapido(nome){
   document.getElementById('modal-cad-rapido-nome-label').textContent='Cadastrando: "'+nome+'"';
   document.getElementById('modal-cad-rapido-wpp').value='';
   document.getElementById('modal-cad-rapido-end').value='';
+  document.getElementById('modal-cad-rapido-doc').value='';
   document.getElementById('modal-cad-rapido-ok').onclick=()=>{
     const wpp=document.getElementById('modal-cad-rapido-wpp').value.trim();
     const end=document.getElementById('modal-cad-rapido-end').value.trim()||'';
     if(!wpp||wpp.replace(/\D/g,'').length<8){toast('⚠️ WhatsApp necessário para cadastrar',true);return;}
+    const cpfCnpj=document.getElementById('modal-cad-rapido-doc').value.trim();
+    if(docInvalido(cpfCnpj)){toast('⚠️ CPF deve ter 11 dígitos ou CNPJ 14 dígitos',true);return;}
     const cli={id:Date.now(),nome:nome.trim(),wpp:wpp.trim(),end,criado:new Date().toISOString()};
+    if(cpfCnpj)cli.cpfCnpj=cpfCnpj;
     clientes.push(cli);
     salvarLocal(true);updStats();
     selecionarCliente(cli.id);
@@ -5506,10 +5549,11 @@ function salvarCliente2(){
   const nome=document.getElementById('nc2-nome').value.trim();
   const wpp=document.getElementById('nc2-wpp').value.trim();
   const end=document.getElementById('nc2-end').value.trim();
+  const cpfCnpj=document.getElementById('nc2-doc').value.trim();
   if(_salvarClienteCommon(nome,wpp,end,()=>{
-    ['nc2-nome','nc2-wpp','nc2-end'].forEach(id=>document.getElementById(id).value='');
+    ['nc2-nome','nc2-wpp','nc2-end','nc2-doc'].forEach(id=>document.getElementById(id).value='');
     setTimeout(()=>document.getElementById('nc2-nome')?.focus(), 100);
-  })){}
+  },cpfCnpj)){}
 }
 
 // Listener para data/hora de agendamento no modal share
