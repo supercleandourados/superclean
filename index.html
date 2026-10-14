@@ -1842,7 +1842,7 @@ function getMesLabel(key){
 function getMesNome(m){
   return ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][m];
 }
-function fmtMoeda(v){return 'R$ '+parseFloat(v||0).toFixed(2).replace('.',',');}
+function fmtMoeda(v){return 'R$ '+parseFloat(v||0).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
 function fmtData(d){return new Date(d+'T12:00:00').toLocaleDateString('pt-BR');}
 function getPreco(tipo,srv){
   const k=tipo+'__'+srv;
@@ -2711,7 +2711,7 @@ function autoPreco(id){
   }
   calcItem(id);
 }
-function parseVal(v){return parseFloat((v||'0').replace(',','.'))||0;}
+function parseVal(v){v=String(v||'0');if(v.indexOf(',')>=0)v=v.replace(/\./g,'').replace(',','.');return parseFloat(v)||0;}
 function parseQtd(v){return parseInt((v||'1').replace(/\D/g,''))||1;}
 function calcItem(id){
   const qtd=parseQtd(document.getElementById('qtd_'+id).value);
@@ -3115,17 +3115,18 @@ function gerarPDF(){
     +'.os-emitida{font-size:11px;color:#888;margin-top:3px;}'
     +'.divider{height:4px;background:linear-gradient(90deg,#1B6FD8,#4CAF22);margin:12px 0;border-radius:2px;}'
     +'.cli-section{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}'
-    +'.cli-box{background:#f5f8ff;border-radius:8px;padding:10px 13px;border-left:4px solid #1B6FD8;}'
+    +'.cli-box{background:#f5f8ff;border-radius:8px;padding:8px 12px;border-left:4px solid #1B6FD8;}'
     +'.cli-box.green{border-left-color:#4CAF22;}'
     +'.cli-label{font-size:11px;font-weight:700;color:#1B6FD8;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}'
     +'.cli-box.green .cli-label{color:#4CAF22;}'
-    +'.cli-val{font-size:16px;font-weight:600;color:#1a1a1a;line-height:1.3;}'
+    +'.cli-val{font-size:15px;font-weight:600;color:#1a1a1a;line-height:1.3;}'
     +'table{width:100%;border-collapse:collapse;margin-bottom:12px;}'
     +'thead tr{background:#1B6FD8;}'
-    +'th{color:#fff;padding:11px 13px;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}'
+    +'th{color:#fff;padding:9px 11px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}'
     +'th:last-child,th:nth-child(4){text-align:right;}'
     +'th:nth-child(3){text-align:center;}'
-    +'td{padding:11px 13px;font-size:15px;border-bottom:1px solid #edf0f7;vertical-align:middle;}'
+    +'td{padding:8px 11px;font-size:14px;border-bottom:1px solid #edf0f7;vertical-align:middle;}'
+    +'td:nth-child(4),td:last-child{white-space:nowrap;}'
     +'td:last-child,td:nth-child(4){text-align:right;}'
     +'td:nth-child(3){text-align:center;}'
     +'tbody tr:nth-child(even) td{background:#f9fbff;}'
@@ -3133,13 +3134,12 @@ function gerarPDF(){
     +'.totais-box{display:flex;justify-content:flex-end;margin-bottom:12px;}'
     +'.totais-inner{background:#f5f8ff;border-radius:10px;padding:12px 20px;min-width:280px;border:1px solid #dbeafe;}'
     +'.total-final{display:flex;justify-content:space-between;gap:40px;padding-top:10px;margin-top:8px;border-top:2px solid #1B6FD8;font-size:24px;font-weight:900;color:#1B6FD8;}'
-    +'.pgto{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;margin-bottom:12px;}'
-    +'.pgto-title{font-size:12px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}'
-    +'.pgto-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}'
-    +'.pgto-item{background:#fff;border:1px solid #d1fae5;border-radius:8px;padding:10px 6px;text-align:center;}'
-    +'.pgto-icon{font-size:22px;display:block;margin-bottom:4px;}'
-    +'.pgto-label{font-size:13px;font-weight:700;color:#15803d;display:block;}'
-    +'.pgto-sub{font-size:11px;color:#6b7280;display:block;margin-top:1px;}'
+    +'.pgto{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:7px 12px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;page-break-inside:avoid;}'
+    +'.pgto-title{font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;}'
+    +'.pgto-grid{display:flex;gap:6px;flex:1;justify-content:flex-end;}'
+    +'.pgto-item{background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:4px 8px;text-align:center;line-height:1.25;}'
+    +'.pgto-label{font-size:11px;font-weight:700;color:#15803d;display:block;}'
+    +'.pgto-sub{font-size:9px;color:#6b7280;display:block;}'
     +'.obs{background:#fefce8;border:1px solid #fde047;border-radius:8px;padding:10px 13px;margin-bottom:10px;font-size:14px;color:#713f12;}'
     +'.footer{border-top:2px solid #eee;padding-top:12px;display:flex;justify-content:space-between;align-items:center;}'
     +'.footer-left{font-size:10px;color:#888;line-height:1.7;}'
@@ -3163,9 +3163,9 @@ function gerarPDF(){
     +'<div class="cli-section">'
     +'  <div class="cli-box"><div class="cli-label">Cliente</div><div class="cli-val">'+os.cliNome+'</div></div>'
     +'  <div class="cli-box"><div class="cli-label">WhatsApp</div><div class="cli-val">'+(os.cliWpp||'&mdash;')+'</div></div>'
-    +'  <div class="cli-box green"><div class="cli-label" style="color:#4CAF22">Data do Or&ccedil;amento</div><div class="cli-val">'+dataOrc+'</div></div>'
+    +(getDocOS(os)?'  <div class="cli-box"><div class="cli-label">CPF / CNPJ</div><div class="cli-val">'+getDocOS(os)+'</div></div>':'')
     +'  <div class="cli-box green"><div class="cli-label" style="color:#4CAF22">Endere&ccedil;o</div><div class="cli-val">'+(os.cliEnd||'Dourados &ndash; MS')+'</div></div>'
-    +(getDocOS(os)?'  <div class="cli-box" style="grid-column:1/-1;"><div class="cli-label">CPF / CNPJ</div><div class="cli-val">'+getDocOS(os)+'</div></div>':'')
+    +'  <div class="cli-box green"'+(getDocOS(os)?' style="grid-column:1/-1;"':'')+'><div class="cli-label" style="color:#4CAF22">Data do Or&ccedil;amento</div><div class="cli-val">'+dataOrc+'</div></div>'
     +'</div>'
     +obsBlock
     +'<table>'
@@ -3182,12 +3182,12 @@ function gerarPDF(){
     +'<div class="total-final"><span>TOTAL</span><span>'+fmtMoeda(os.total)+'</span></div>'
     +'</div></div>'
     +'<div class="pgto">'
-    +'<div class="pgto-title">&#128179; Formas de Pagamento</div>'
+    +'<div class="pgto-title">Formas de Pagamento</div>'
     +'<div class="pgto-grid">'
-    +'<div class="pgto-item"><span class="pgto-icon">&#128176;</span><span class="pgto-label">Dinheiro</span><span class="pgto-sub">A vista</span></div>'
-    +'<div class="pgto-item"><span class="pgto-icon">&#128247;</span><span class="pgto-label">PIX</span><span class="pgto-sub">A vista</span></div>'
-    +'<div class="pgto-item"><span class="pgto-icon">&#128179;</span><span class="pgto-label">Cart&atilde;o</span><span class="pgto-sub">at&eacute; 5x sem juros</span></div>'
-    +'<div class="pgto-item"><span class="pgto-icon">&#128204;</span><span class="pgto-label">Parcelado</span><span class="pgto-sub">5x de '+total5x+'</span></div>'
+    +'<div class="pgto-item"><span class="pgto-label">Dinheiro</span><span class="pgto-sub">A vista</span></div>'
+    +'<div class="pgto-item"><span class="pgto-label">PIX</span><span class="pgto-sub">A vista</span></div>'
+    +'<div class="pgto-item"><span class="pgto-label">Cart&atilde;o</span><span class="pgto-sub">at&eacute; 5x sem juros</span></div>'
+    +'<div class="pgto-item"><span class="pgto-label">Parcelado</span><span class="pgto-sub">5x de '+total5x+'</span></div>'
     +'</div>'
     +'</div>'
     +'<div class="footer">'
