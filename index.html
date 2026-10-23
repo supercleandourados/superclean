@@ -1175,7 +1175,7 @@ select option{background:#0a1e38;}
 
     <div style="margin-bottom:16px;">
       <label style="display:block;font-size:11px;font-weight:600;color:#c0392b;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📄 PDF do Orçamento</label>
-      <button class="btn btn-pdf" onclick="gerarPDF()" style="width:100%;">📄 Baixar PDF</button>
+      <button class="btn btn-pdf" id="btn-pdf-share" onclick="gerarPDF()" style="width:100%;">📄 Gerar e Enviar PDF</button>
     </div>
 
     <button class="btn btn-o" onclick="fecharModal('modal-share')" style="width:100%;">Fechar</button>
@@ -2861,6 +2861,7 @@ function abrirCompartilhar(osId){
   const todas=getTodasOS();
   const os=todas.find(o=>o.id===osId||String(o.id)===String(osId));if(!os)return;
   osCompartilhar=os;
+  _resetBtnPDF();
   document.getElementById('share-os-info').textContent=
     'OS #'+String(os.numero).padStart(4,'0')+' · '+os.cliNome+' · '+fmtMoeda(os.total);
   const txt=gerarTextoWpp(os);
@@ -3081,10 +3082,8 @@ function abrirWpp(){
   const f=(osCompartilhar.cliWpp||'').replace(/\D/g,'');
   window.open('https://wa.me/'+(f?'55'+f:'')+'?text='+encodeURIComponent(txt),'_blank');
 }
-function gerarPDF(){
-  if(!osCompartilhar)return;
+function _htmlOrcamento(os){
   const _logoSrc=(document.getElementById('logo-master')||{}).src||'';
-  const os=osCompartilhar;
   const dataOrc=os.dataOrc?fmtData(os.dataOrc):new Date(os.dataCriacao).toLocaleDateString('pt-BR');
   const itensHtml=os.itens.map(i=>{
     const qtd=i.qtd>1?i.qtd+'×':'1×';
@@ -3203,6 +3202,10 @@ function gerarPDF(){
     +'</div>'
     +'</div>'
     +'</body></html>';
+  return html;
+}
+// Fallback: abre a caixa de impressão do navegador ("Salvar como PDF")
+function _imprimirHtml(html){
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const iframe=document.createElement('iframe');
@@ -3215,6 +3218,110 @@ function gerarPDF(){
     setTimeout(()=>{URL.revokeObjectURL(url);document.body.removeChild(iframe);},3000);
   };
   toast('🖨️ Caixa de impressão aberta — escolha "Salvar como PDF"');
+}
+// Biblioteca de PDF só é baixada quando o usuário pede o PDF (não pesa na abertura do sistema)
+let _pdfLibPromise=null;
+function _carregarScript(src){
+  return new Promise((res,rej)=>{
+    const sc=document.createElement('script');
+    sc.src=src;sc.onload=res;sc.onerror=()=>rej(new Error('falha ao carregar '+src));
+    document.head.appendChild(sc);
+  });
+}
+function _carregarLibPDF(){
+  if(window.html2canvas&&window.jspdf)return Promise.resolve();
+  if(_pdfLibPromise)return _pdfLibPromise;
+  _pdfLibPromise=Promise.all([
+    window.html2canvas?0:_carregarScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
+    window.jspdf?0:_carregarScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
+  ]).catch(e=>{_pdfLibPromise=null;throw e;});
+  return _pdfLibPromise;
+}
+// Converte o canvas da página em PDF A4 (margens 12/14mm); fatia em várias páginas se precisar
+function _canvasParaPDF(canvas){
+  const pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+  const mx=14,my=12,pw=210-2*mx,ph=297-2*my;
+  const imgH=canvas.height*pw/canvas.width;
+  if(imgH<=ph){
+    pdf.addImage(canvas.toDataURL('image/jpeg',0.95),'JPEG',mx,my,pw,imgH);
+  }else{
+    const fatiaPx=Math.floor(ph*canvas.width/pw);
+    for(let y=0,p=0;y<canvas.height;y+=fatiaPx,p++){
+      const h=Math.min(fatiaPx,canvas.height-y);
+      const c=document.createElement('canvas');c.width=canvas.width;c.height=h;
+      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,h);
+      ctx.drawImage(canvas,0,y,canvas.width,h,0,0,canvas.width,h);
+      if(p>0)pdf.addPage();
+      pdf.addImage(c.toDataURL('image/jpeg',0.95),'JPEG',mx,my,pw,h*pw/canvas.width);
+    }
+  }
+  return pdf.output('blob');
+}
+let _pdfPronto=null; // {chave, file} — PDF já gerado da OS aberta no modal
+function _resetBtnPDF(){
+  _pdfPronto=null;
+  const b=document.getElementById('btn-pdf-share');
+  if(b)b.textContent='📄 Gerar e Enviar PDF';
+}
+async function _enviarArquivoPDF(file,os){
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    await navigator.share({files:[file],title:'Orçamento OS #'+String(os.numero).padStart(4,'0'),text:'Orçamento SUPER CLEAN - Higienização'});
+    return;
+  }
+  // Sem compartilhamento nativo (computador): baixa o arquivo
+  const url=URL.createObjectURL(file);
+  const a=document.createElement('a');a.href=url;a.download=file.name;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  toast('📄 PDF baixado — anexe no WhatsApp');
+}
+async function gerarPDF(){
+  if(!osCompartilhar)return;
+  const os=osCompartilhar;
+  const chave=os.id+'|'+(os.updatedAt||0)+'|'+os.total;
+  const btn=document.getElementById('btn-pdf-share');
+  if(btn&&btn.disabled)return;
+  // PDF já pronto (2º toque): compartilha na hora, sem perder o "gesto" do toque
+  if(_pdfPronto&&_pdfPronto.chave===chave){
+    try{await _enviarArquivoPDF(_pdfPronto.file,os);}
+    catch(e){if(!e||e.name!=='AbortError')toast('⚠️ Não foi possível compartilhar o PDF',true);}
+    return;
+  }
+  const html=_htmlOrcamento(os);
+  const nomeCli=(os.cliNome||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,30);
+  const nome='Orcamento-OS-'+String(os.numero).padStart(4,'0')+(nomeCli?'-'+nomeCli:'')+'.pdf';
+  if(btn){btn.disabled=true;btn.textContent='⏳ Gerando PDF...';}
+  let fr=null;
+  try{
+    await _carregarLibPDF();
+    fr=document.createElement('iframe');
+    fr.style.cssText='position:fixed;left:-9999px;top:0;width:688px;height:1400px;border:0;';
+    document.body.appendChild(fr);
+    fr.contentDocument.open();fr.contentDocument.write(html);fr.contentDocument.close();
+    const imgs=[...fr.contentDocument.images];
+    await Promise.all(imgs.map(im=>im.complete?Promise.resolve():new Promise(r=>{im.onload=im.onerror=r;})));
+    const body=fr.contentDocument.body;
+    const canvas=await window.html2canvas(body,{scale:2,useCORS:true,windowWidth:688,backgroundColor:'#ffffff',height:body.scrollHeight});
+    const blob=_canvasParaPDF(canvas);
+    const file=new File([blob],nome,{type:'application/pdf'});
+    _pdfPronto={chave,file};
+    if(btn){btn.disabled=false;btn.textContent='📤 Enviar PDF (toque para compartilhar)';}
+    try{
+      await _enviarArquivoPDF(file,os);
+    }catch(e){
+      if(e&&e.name==='AbortError')return;
+      // O navegador exige um toque novo para abrir o compartilhamento depois de gerar
+      toast('✅ PDF pronto! Toque de novo em "Enviar PDF" para compartilhar');
+    }
+  }catch(e){
+    console.warn('PDF erro:',e);
+    _pdfPronto=null;
+    if(btn){btn.disabled=false;btn.textContent='📄 Gerar e Enviar PDF';}
+    toast('⚠️ Não foi possível gerar o PDF direto — abrindo impressão',true);
+    _imprimirHtml(html);
+  }finally{
+    if(fr)fr.remove();
+  }
 }
 function renderOS(o,comActions,isHistorico){
   const sc={pendente:'sp',aprovado:'sf',cancelado:'st-canc'}[o.status]||'sp';
