@@ -3294,14 +3294,25 @@ async function gerarPDF(){
   let fr=null;
   try{
     await _carregarLibPDF();
-    fr=document.createElement('iframe');
-    fr.style.cssText='position:fixed;left:-9999px;top:0;width:688px;height:1400px;border:0;';
-    document.body.appendChild(fr);
-    fr.contentDocument.open();fr.contentDocument.write(html);fr.contentDocument.close();
-    const imgs=[...fr.contentDocument.images];
-    await Promise.all(imgs.map(im=>im.complete?Promise.resolve():new Promise(r=>{im.onload=im.onerror=r;})));
-    const body=fr.contentDocument.body;
-    const canvas=await window.html2canvas(body,{scale:2,useCORS:true,windowWidth:688,backgroundColor:'#ffffff',height:body.scrollHeight});
+    // Quanto mais estreita a largura de renderização, maior a letra no PDF (a imagem é esticada
+    // para a largura da folha). Usa a menor largura em que tudo ainda cabe em 1 página;
+    // se nem a mais larga couber, o PDF segue em mais de uma página.
+    const LARGURAS=[540,580,620,660,688];
+    const limiteH=(297-24)/(210-28); // altura útil / largura útil da folha
+    let canvas=null;
+    for(let li=0;li<LARGURAS.length;li++){
+      const W=LARGURAS[li];
+      if(fr)fr.remove();
+      fr=document.createElement('iframe');
+      fr.style.cssText='position:fixed;left:-9999px;top:0;width:'+W+'px;height:1600px;border:0;';
+      document.body.appendChild(fr);
+      fr.contentDocument.open();fr.contentDocument.write(html);fr.contentDocument.close();
+      const imgs=[...fr.contentDocument.images];
+      await Promise.all(imgs.map(im=>im.complete?Promise.resolve():new Promise(r=>{im.onload=im.onerror=r;})));
+      const body=fr.contentDocument.body;
+      canvas=await window.html2canvas(body,{scale:2,useCORS:true,windowWidth:W,backgroundColor:'#ffffff',height:body.scrollHeight});
+      if(canvas.height/canvas.width<=limiteH)break;
+    }
     const blob=_canvasParaPDF(canvas);
     const file=new File([blob],nome,{type:'application/pdf'});
     _pdfPronto={chave,file};
