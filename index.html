@@ -3159,8 +3159,10 @@ function _htmlOrcamento(os){
     +'.sign{margin:34px 40px 0;display:flex;justify-content:space-between;align-items:flex-end;gap:40px;}'
     +'.sign .line{flex:1;border-top:1.5px solid #14213d;padding-top:6px;text-align:center;font-size:12px;color:#5b6b85;}'
     +'.thanks{margin:22px 40px 0;text-align:center;font-size:16px;font-weight:700;color:#1B6FD8;letter-spacing:.4px;}'
-    +'.foot{margin-top:14px;background:#1B6FD8;color:#dbe8fb;font-size:11.5px;padding:11px 40px;text-align:center;line-height:1.7;}'
-    +'.foot b{color:#fff;}.foot i{font-style:normal;color:#a8e68a;margin:0 6px;}';
+    +'.valid{margin:4px 40px 0;text-align:center;font-size:11px;color:#8a97ad;}'
+    +'.foot{margin-top:12px;background:#1B6FD8;color:#dbe8fb;font-size:10px;padding:7px 40px;text-align:center;line-height:1.5;}'
+    +'.foot b{color:#fff;font-weight:700;}.foot i{font-style:normal;color:#a8e68a;margin:0 5px;}'
+    +'html,body{-webkit-text-size-adjust:none;text-size-adjust:none;}';
   const html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'
     +'<title>OS #'+String(os.numero).padStart(4,'0')+' - SUPER CLEAN Higienização</title>'
     +'<style>'+css+'</style></head><body><div id="doc">'
@@ -3187,8 +3189,8 @@ function _htmlOrcamento(os){
     +'<div class="spacer"></div>'
     +'<div class="sign"><div class="line">SUPER CLEAN &mdash; Higieniza&ccedil;&atilde;o</div><div class="line">Aprova&ccedil;&atilde;o do cliente</div></div>'
     +'<div class="thanks">Obrigado pela prefer&ecirc;ncia!</div>'
-    +'<div class="foot">WhatsApp <b>(67) 99225-3296</b><i>&bull;</i>E-mail <b>supercleandourados@gmail.com</b><i>&bull;</i>Instagram <b>@supercleandourados</b><br>'
-    +'<b>supercleandourados.com.br</b><i>&bull;</i>CNPJ <b>40.005.535/0001-70</b><i>&bull;</i>Or&ccedil;amento v&aacute;lido por 15 dias</div>'
+    +'<div class="valid">Or&ccedil;amento v&aacute;lido por 15 dias</div>'
+    +'<div class="foot">WhatsApp <b>(67) 99225-3296</b><i>&bull;</i><b>supercleandourados@gmail.com</b><i>&bull;</i><b>@supercleandourados</b><i>&bull;</i><b>supercleandourados.com.br</b><i>&bull;</i>CNPJ <b>40.005.535/0001-70</b></div>'
     +'</div></body></html>';
   return html;
 }
